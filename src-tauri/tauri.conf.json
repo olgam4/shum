@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
+  "productName": "SHUM",
+  "version": "0.1.0",
+  "identifier": "sh.anomaly.shum",
+  "build": {
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {},
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "iOS": {
+      "developmentTeam": "YOUR_TEAM_ID",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"],
+        "NSMicrophoneUsageDescription": "SHUM uses the microphone for visual audio spectrum analysis.",
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "CFBundleDisplayName": "SHUM",
+        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0",
+        "UIRequiresFullScreen": true,
+        "UIStatusBarHidden": true,
+        "UIViewControllerBasedStatusBarAppearance": false
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "shum",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsrx-tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "ripple": "latest",
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@ripple-ts/vite-plugin": "latest",
+    "@ripple-ts/language-server": "latest",
+    "@tsrx/typescript-plugin": "latest",
+    "@tsrx/eslint-plugin": "latest",
+    "@tsrx/prettier-plugin": "latest",
+    "@tsrx/eslint-parser": "latest",
+    "typescript": "^5.9.3",
+    "@typescript-eslint/parser": "^8.20.0",
+    "prettier": "^3.6.2",
+    "eslint": "^9.0.0",
+    "vite": "^8.0.0"
+  }
+}
