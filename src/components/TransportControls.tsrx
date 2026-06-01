@@ -9,7 +9,7 @@ export function TransportControls(&{ playbackState, track }: {
   return <>
     <div class="tc-root">
       <button class="ctrl-btn ctrl-btn--side" disabled aria-label="Previous">
-        <span class="ctrl-glyph">◁◁</span>
+        <span class="ctrl-glyph">{'◁◁'}</span>
       </button>
 
       if (playbackState === 'playing') {
@@ -18,7 +18,7 @@ export function TransportControls(&{ playbackState, track }: {
           aria-label="Pause"
           onClick={() => actions.requestPause()}
         >
-          <span class="ctrl-glyph">■</span>
+          <span class="ctrl-glyph">{'■'}</span>
         </button>
       } else {
         <button
@@ -26,12 +26,12 @@ export function TransportControls(&{ playbackState, track }: {
           aria-label="Play"
           onClick={() => actions.requestPlay(track)}
         >
-          <span class="ctrl-glyph">▶</span>
+          <span class="ctrl-glyph">{'▶'}</span>
         </button>
       }
 
       <button class="ctrl-btn ctrl-btn--side" disabled aria-label="Next">
-        <span class="ctrl-glyph">▷▷</span>
+        <span class="ctrl-glyph">{'▷▷'}</span>
       </button>
     </div>
 

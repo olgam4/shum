@@ -2,12 +2,12 @@ export function Header() {
   return <>
     <div class="shum-header">
       <h1 class="shum-wordmark" aria-label="SHUM">
-        <span class="shum-char shum-char-a">S</span>
-        <span class="shum-char shum-char-b">H</span>
-        <span class="shum-char shum-char-c">U</span>
-        <span class="shum-char shum-char-d">M</span>
+        <span class="shum-char shum-char-a">{'S'}</span>
+        <span class="shum-char shum-char-b">{'H'}</span>
+        <span class="shum-char shum-char-c">{'U'}</span>
+        <span class="shum-char shum-char-d">{'M'}</span>
       </h1>
-      <span class="shum-subtitle">Шум</span>
+      <span class="shum-subtitle">{'Шум'}</span>
     </div>
 
     <style>

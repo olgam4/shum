@@ -1,9 +1,9 @@
 export function EmptyState() {
   return <>
     <div class="empty-state">
-      <div class="empty-glyph">~</div>
-      <p class="empty-label">NOISE AWAITS</p>
-      <p class="empty-hint">Select a track from your Navidrome library</p>
+      <div class="empty-glyph">{'~'}</div>
+      <p class="empty-label">{'NOISE AWAITS'}</p>
+      <p class="empty-hint">{'Select a track from your Navidrome library'}</p>
     </div>
 
     <style>

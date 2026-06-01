@@ -6,7 +6,7 @@ export function VolumeControl(&{ volumePercent }: {
 }) {
   return <>
     <div class="vc-root">
-      <span class="volume-label">VOL {volumePercent}%</span>
+      <span class="volume-label">{'VOL '}{volumePercent}{'%'}</span>
       <div class="volume-bar-track">
         <div class="volume-bar-fill" style={{ '--vol': volumePercent }} />
       </div>
@@ -15,7 +15,7 @@ export function VolumeControl(&{ volumePercent }: {
         aria-label="Stop"
         onClick={() => actions.requestStop()}
       >
-        <span class="stop-glyph">⏹</span>
+        <span class="stop-glyph">{'⏹'}</span>
       </button>
     </div>
 
