@@ -298,39 +298,62 @@ Ripple re-renders              ← components read Tracked<T> via &{}
 
 ## Color Token System
 
-All colors derive from three primitives. Change them in one place to recolor the entire application.
+All colors derive from three primitives and a neutral set. Change the three `--pr-*` values in `App.tsrx` to recolor the entire application.
 
 ### Primitive Tokens
 
 | Token | Hex | `oklch()` | Role |
 |---|---|---|---|
-| `--shum-yellow` | `#FFDA29` | `oklch(89% 0.21 100)` | Primary brand, progress bars, shadows |
-| `--shum-gentian` | `#3366FF` | `oklch(52% 0.32 262)` | Accent, playing indicator, secondary borders |
-| `--shum-ruby` | `#F10C45` | `oklch(53% 0.28 12)` | Danger/stop, paused indicator, error states |
-| `--shum-ink` | — | `oklch(12% 0.02 260)` | Background surface |
-| `--shum-ink-raised` | — | `oklch(16% 0.02 260)` | Raised panels, cards |
+| `--pr-yellow` | `#FFDA29` | `oklch(89% 0.21 100)` | Raw brand color |
+| `--pr-gentian` | `#3366FF` | `oklch(52% 0.32 262)` | Raw accent color |
+| `--pr-ruby` | `#F10C45` | `oklch(53% 0.28 12)` | Raw danger/stop color |
+| `--pr-ink` | — | `oklch(12% 0.02 260)` | Deepest background |
+| `--pr-ink-raised` | — | `oklch(16% 0.02 260)` | Elevated surfaces |
+| `--pr-white` | — | `oklch(98% 0 0)` | Pure white |
 
 ### Semantic Tokens
 
+Each primitive is assigned a **role** via a semantic alias. Components never reference primitives directly — they use the role tokens.
+
 | Token | Maps to | Used for |
 |---|---|---|
-| `--shum-color-surface` | `--shum-ink` | Page background |
-| `--shum-color-surface-raised` | `--shum-ink-raised` | Now Playing panel |
-| `--shum-color-text` | `oklch(98% 0 0)` | Primary text |
-| `--shum-color-text-muted` | `oklch(98% 0 0 / 0.45)` | Secondary labels |
-| `--shum-color-brand` | `--shum-yellow` | Borders, highlights, progress |
-| `--shum-color-accent` | `--shum-gentian` | Playing state, fill bars |
-| `--shum-color-danger` | `--shum-ruby` | Stop button, buffering state |
+| `--color-primary` | `--pr-yellow` | Borders, highlights, progress fill, shadows, pause indicator |
+| `--color-secondary` | `--pr-gentian` | Accent borders, playing indicator, artist name, volume fill |
+| `--color-tertiary` | `--pr-ruby` | Stop button, buffering indicator, error states |
+| `--color-surface` | `--pr-ink` | Page background, button background |
+| `--color-surface-elevated` | `--pr-ink-raised` | Now Playing panel, primary buttons |
+| `--color-text` | `--pr-white` | Primary text everywhere |
+| `--color-text-muted` | `oklch(98% 0 0 / 0.45)` | Secondary labels, album name, time total |
+| `--border-width` | `3px` | All structural borders |
+| `--shadow-offset` | `4px` | Neo-brutalist box-shadow offset |
+| `--font-family` | `'SF Mono', 'Fira Code', 'Courier New', monospace` | Global typography |
 
-Tokens are defined once in `App.tsrx` as global CSS custom properties (`:global(:root) { ... }`). Every component reads them via `var(--shum-color-brand)` etc.
+### How to Re-skin
 
-### Typography & Spacing Tokens
+Change these three lines in `src/App.tsrx` — every component follows:
 
-| Token | Value |
-|---|---|
-| `--shum-font` | `'SF Mono', 'Fira Code', 'Courier New', monospace` |
-| `--shum-border` | `3px` |
-| `--shum-shadow` | `4px` |
+```css
+--pr-yellow: oklch(89% 0.21 100);   /* primary */
+--pr-gentian: oklch(52% 0.32 262);   /* secondary */
+--pr-ruby: oklch(53% 0.28 12);      /* tertiary */
+```
+
+### Token Assignment Logic
+
+| UI Element | Uses | Reason |
+|---|---|---|
+| Progress bar fill | `--color-primary` | Dominant, attention-grabbing |
+| Marquee title | `--color-primary` | Most important text |
+| Now Playing border | `--color-primary` | Structural anchor |
+| Play button shadow | `--color-primary` | Primary CTA reinforcement |
+| Playing state dot | `--color-secondary` | Calm, steady "active" signifier |
+| Artist name | `--color-secondary` | Secondary information |
+| Album art border | `--color-secondary` | Visual frame, not main focus |
+| Stop button | `--color-tertiary` | Destructive/terminal action |
+| Buffering indicator | `--color-tertiary` | Transient, alerting state |
+| Header char-a | `--color-tertiary` | First letter — bold opener |
+| Header char-b | `--color-primary` | Second letter — brand anchor |
+| Header char-c | `--color-secondary` | Third letter — complementary close |
 
 ---
 

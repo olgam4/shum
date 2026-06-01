@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PlaybackState {
@@ -11,6 +10,7 @@ pub enum PlaybackState {
 }
 
 impl PlaybackState {
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &'static str {
         match self {
             PlaybackState::Playing => "playing",
@@ -51,7 +51,8 @@ impl Default for AudioState {
 }
 
 pub trait AudioPlatform {
-    fn load(&mut self, url: &str) -> Result<(), String>;
+    fn load_url(&mut self, url: &str) -> Result<(), String>;
+    fn load_file(&mut self, path: &str) -> Result<(), String>;
     fn play(&mut self) -> Result<(), String>;
     fn pause(&mut self) -> Result<(), String>;
     fn stop(&mut self) -> Result<(), String>;
@@ -86,9 +87,15 @@ impl<P: AudioPlatform> AudioManager<P> {
         platform: &Arc<Mutex<P>>,
         track: TrackMeta,
         stream_url: String,
+        local_path: Option<String>,
     ) -> Result<AudioState, String> {
         let mut plat = platform.lock().map_err(|e| e.to_string())?;
-        plat.load(&stream_url)?;
+
+        if let Some(ref path) = local_path {
+            plat.load_file(path)?;
+        } else {
+            plat.load_url(&stream_url)?;
+        }
 
         let mut s = state.lock().map_err(|e| e.to_string())?;
         s.current_track = Some(track);
@@ -185,6 +192,7 @@ impl<P: AudioPlatform> AudioManager<P> {
         Ok(s.clone())
     }
 
+    #[allow(dead_code)]
     pub fn set_buffering(
         state: &Arc<Mutex<AudioState>>,
     ) -> Result<AudioState, String> {
