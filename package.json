@@ -15,8 +15,9 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
     "ripple": "latest",
-    "@tauri-apps/api": "^2.0.0"
+    "tauri-plugin-native-audio-api": "^1.0.5"
   },
   "devDependencies": {
     "@ripple-ts/language-server": "latest",

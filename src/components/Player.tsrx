@@ -17,42 +17,42 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
   return <>
     <div class="player-overlay" onClick={() => {
       actions.haptic('light');
-      playerOpen.value = false;
+      actions.closePlayer();
     }}>
       <div class="player-sheet" onClick={(e) => e.stopPropagation()}>
         <button class="close-btn" onClick={() => {
           actions.haptic('light');
-          playerOpen.value = false;
+          actions.closePlayer();
         }}>
           <IconChevronUp />
         </button>
 
         <div class="player-content">
           <div class="album-art-container">
-            if (track?.coverArtUrl) {
-              <img class="album-art" src={track.coverArtUrl} alt={track.album} />
+            if (track.value?.coverArtUrl) {
+              <img class="album-art" src={track.value.coverArtUrl} alt={track.value.album} />
             } else {
               <div class="album-art-placeholder">
-                <span class="placeholder-glyph" data-state={playbackState}>
-                  {playbackState === 'playing' ? '⋆' : '□'}
+                <span class="placeholder-glyph" data-state={playbackState.value}>
+                  {playbackState.value === 'playing' ? '⋆' : '□'}
                 </span>
               </div>
             }
           </div>
 
           <div class="track-info">
-            <h2 class="track-title">{track?.title ?? '—'}</h2>
-            <p class="track-artist">{track?.artist ?? 'Unknown Artist'}</p>
-            <p class="track-album">{track?.album ?? ''}</p>
+            <h2 class="track-title">{track.value?.title ?? '—'}</h2>
+            <p class="track-artist">{track.value?.artist ?? 'Unknown Artist'}</p>
+            <p class="track-album">{track.value?.album ?? ''}</p>
           </div>
 
           <div class="progress-section">
             <div class="progress-bar-track">
-              <div class="progress-bar-fill" style={{ '--pb': progressPercent }} />
+              <div class="progress-bar-fill" style={{ '--pb': progressPercent.value }} />
             </div>
             <div class="progress-times">
-              <span class="time-elapsed">{formatTime(progress)}</span>
-              <span class="time-total">{formatTime(duration)}</span>
+              <span class="time-elapsed">{formatTime(progress.value)}</span>
+              <span class="time-total">{formatTime(duration.value)}</span>
             </div>
           </div>
 
@@ -61,7 +61,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
               <span class="ctrl-glyph">{'◁◁'}</span>
             </button>
 
-            if (playbackState === 'playing') {
+            if (playbackState.value === 'playing') {
               <button class="ctrl-btn ctrl-btn--primary" onClick={() => {
                 actions.haptic('light');
                 actions.requestPause();
@@ -71,7 +71,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
             } else {
               <button class="ctrl-btn ctrl-btn--primary" onClick={() => {
                 actions.haptic('light');
-                actions.requestPlay(track);
+                actions.requestPlay(track.value);
               }}>
                 <span class="ctrl-glyph">{'▶'}</span>
               </button>
@@ -83,9 +83,9 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
           </div>
 
           <div class="volume-section">
-            <span class="volume-label">{'VOL '}{volumePercent}{'%'}</span>
+            <span class="volume-label">{'VOL '}{volumePercent.value}{'%'}</span>
             <div class="volume-bar-track">
-              <div class="volume-bar-fill" style={{ '--vol': volumePercent }} />
+              <div class="volume-bar-fill" style={{ '--vol': volumePercent.value }} />
             </div>
             <button class="stop-btn" onClick={() => {
               actions.haptic('medium');
@@ -96,10 +96,10 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
           </div>
 
           <div class="status-bar">
-            <span class="status-label" data-state={playbackState}>
-              {playbackState.toUpperCase()}
+            <span class="status-label" data-state={playbackState.value}>
+              {playbackState.value.toUpperCase()}
             </span>
-            <span class="status-dot" data-state={playbackState} />
+            <span class="status-dot" data-state={playbackState.value} />
           </div>
         </div>
       </div>
@@ -114,6 +114,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+        padding-top: env(safe-area-inset-top, 0px);
         animation: overlay-in 0.2s ease;
       }
 
@@ -125,11 +126,13 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       .player-sheet {
         background: var(--color-surface-elevated);
         border-top: var(--border-width) solid var(--color-primary);
-        max-height: 95dvh;
-        overflow-y: auto;
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         -webkit-overflow-scrolling: touch;
-        padding: clamp(12px, 3vw, 20px);
-        padding-bottom: calc(var(--safe-bottom) + 20px);
+        padding: clamp(8px, 2vw, 14px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
         animation: sheet-up 0.25s ease;
       }
 
@@ -140,7 +143,8 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
 
       .close-btn {
         display: block;
-        margin: 0 auto 12px auto;
+        flex-shrink: 0;
+        margin: 0 auto 4px auto;
         background: none;
         border: none;
         color: var(--color-text-muted);
@@ -153,17 +157,22 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       }
 
       .player-content {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: clamp(14px, 3vh, 24px);
+        gap: clamp(6px, 1.2vh, 12px);
         max-width: 420px;
         margin: 0 auto;
       }
 
       .album-art-container {
-        width: clamp(180px, 55vw, 300px);
-        height: clamp(180px, 55vw, 300px);
+        width: clamp(120px, 45vw, 260px);
+        height: clamp(120px, 45vw, 260px);
+        flex-shrink: 0;
         border: var(--border-width) solid var(--color-secondary);
         overflow: hidden;
         box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
@@ -179,7 +188,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
 
       .placeholder-glyph {
         font-size: clamp(3rem, 8vw, 5rem);
-        color: var(--color-primary);
+        color: var(--color-secondary);
         opacity: 0.5;
       }
 
@@ -204,7 +213,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       .track-title {
         font-size: clamp(1.25rem, 4vw, 1.75rem);
         font-weight: 800;
-        color: var(--color-primary);
+        color: var(--color-secondary);
         margin: 0;
       }
 
@@ -243,7 +252,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
         font-weight: 700; letter-spacing: 0.06em;
       }
 
-      .time-elapsed { color: var(--color-primary); }
+      .time-elapsed { color: var(--color-text); }
       .time-total { color: var(--color-text-muted); }
 
       .transport-controls {
@@ -267,16 +276,16 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       .ctrl-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
       .ctrl-btn--primary {
-        width: clamp(64px, 16vw, 88px);
-        height: clamp(64px, 16vw, 88px);
+        width: clamp(52px, 14vw, 72px);
+        height: clamp(52px, 14vw, 72px);
         border-color: var(--color-secondary);
         box-shadow: 6px 6px 0px var(--color-primary);
         background: var(--color-surface-elevated);
       }
 
       .ctrl-btn--side {
-        width: clamp(44px, 10vw, 56px);
-        height: clamp(44px, 10vw, 56px);
+        width: clamp(36px, 9vw, 48px);
+        height: clamp(36px, 9vw, 48px);
         border-color: var(--color-primary);
         box-shadow: 3px 3px 0px oklch(52% 0.32 262 / 0.6);
       }
@@ -291,7 +300,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       .volume-label {
         font-size: clamp(0.625rem, 1.5vw, 0.75rem);
         font-weight: 800; letter-spacing: 0.08em;
-        color: var(--color-primary);
+        color: var(--color-secondary);
         white-space: nowrap; min-width: 52px;
       }
 
@@ -327,7 +336,8 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
 
       .status-bar {
         width: 100%; display: flex; align-items: center; justify-content: space-between;
-        padding-top: 10px;
+        padding-top: 6px;
+        flex-shrink: 0;
         border-top: 2px solid oklch(15% 0.02 260 / 0.1);
       }
 
@@ -338,7 +348,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       }
 
       .status-label[data-state='playing'] { color: var(--color-secondary); }
-      .status-label[data-state='paused'] { color: var(--color-primary); }
+      .status-label[data-state='paused'] { color: var(--color-tertiary); }
       .status-label[data-state='buffering'] {
         color: var(--color-tertiary);
         animation: status-blink 0.8s step-end infinite;
@@ -359,8 +369,8 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       }
 
       .status-dot[data-state='paused'] {
-        background: var(--color-primary);
-        border-color: var(--color-primary);
+        background: var(--color-tertiary);
+        border-color: var(--color-tertiary);
       }
 
       .status-dot[data-state='buffering'] {

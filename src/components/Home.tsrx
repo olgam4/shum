@@ -14,21 +14,21 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
 }) {
   return <>
     <div class="home">
-      if (!track) {
+      if (!track.value) {
         <div class="welcome-card">
           <h2 class="welcome-title">{'Welcome'}</h2>
           <p class="welcome-sub">{'Welcome to SHUM'}</p>
-          if (syncing) {
+          if (syncing.value) {
             <div class="syncing-state">
               <span class="syncing-dot" />
               <span class="syncing-text">{'Syncing library...'}</span>
             </div>
-          } else if (connection !== 'connected') {
+          } else if (connection.value !== 'connected') {
             <div class="connect-prompt">
               <p class="prompt-text">{'No server connected.'}</p>
               <button class="prompt-btn" onClick={() => {
                 actions.haptic('light');
-                route.value = 'settings';
+                actions.navigate('settings');
               }}>
                 {'Connect to Navidrome'}
               </button>
@@ -36,15 +36,15 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
           } else {
             <div class="stats">
               <div class="stat-item">
-                <span class="stat-value">{syncSongCount}</span>
+                <span class="stat-value">{syncSongCount.value}</span>
                 <span class="stat-label">{'Songs'}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-value">{syncAlbumCount}</span>
+                <span class="stat-value">{syncAlbumCount.value}</span>
                 <span class="stat-label">{'Albums'}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-value">{syncArtistCount}</span>
+                <span class="stat-value">{syncArtistCount.value}</span>
                 <span class="stat-label">{'Artists'}</span>
               </div>
             </div>
@@ -81,7 +81,7 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
       .welcome-title {
         font-size: clamp(1.25rem, 4vw, 2rem);
         font-weight: 900;
-        color: var(--color-primary);
+        color: var(--color-secondary);
         margin: 0 0 4px 0;
       }
 
@@ -106,16 +106,16 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
 
       .prompt-btn {
         min-height: var(--tap-min);
-        border: var(--border-width) solid var(--color-primary);
+        border: var(--border-width) solid var(--color-secondary);
         background: var(--color-surface);
-        color: var(--color-primary);
+        color: var(--color-secondary);
         font-family: var(--font-family);
         font-weight: 800;
         font-size: clamp(0.75rem, 2vw, 0.875rem);
         letter-spacing: 0.06em;
         padding: 10px 24px;
         cursor: pointer;
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-secondary);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
         -webkit-tap-highlight-color: transparent;
         outline: none;
       }
@@ -161,7 +161,7 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
         font-size: clamp(0.7rem, 1.8vw, 0.8rem);
         font-weight: 700;
         letter-spacing: 0.08em;
-        color: var(--color-primary);
+        color: var(--color-secondary);
       }
 
       .stat-value {

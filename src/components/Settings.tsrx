@@ -23,18 +23,11 @@ export function Settings(props: {
     errorMsg.value = null;
     actions.connectServer(serverUrl.value, username.value, password.value)
       .then((result: any) => {
-        if (result?.connected) {
-          actions.syncLibrary()
-            .then(() => {
-              busy.value = false;
-            })
-            .catch((e: any) => {
-              busy.value = false;
-              errorMsg.value = 'Sync failed: ' + String(e?.message ?? e);
-            });
+        if (result?.connectionStatus?.connected) {
+          busy.value = false;
         } else {
           busy.value = false;
-          errorMsg.value = result?.error ?? 'Connection failed';
+          errorMsg.value = result?.connectionStatus?.error ?? 'Connection failed';
         }
       })
       .catch((e: any) => {
@@ -45,13 +38,10 @@ export function Settings(props: {
 
   const handleSync = () => {
     actions.haptic('medium');
-    props.syncing.value = true;
+    errorMsg.value = null;
     actions.syncLibrary()
-      .then(() => {
-        props.syncing.value = false;
-      })
-      .catch(() => {
-        props.syncing.value = false;
+      .catch((e: any) => {
+        errorMsg.value = 'Sync failed: ' + String(e?.message ?? e);
       });
   };
 
@@ -156,7 +146,7 @@ export function Settings(props: {
         font-size: clamp(0.7rem, 1.8vw, 0.8rem);
         font-weight: 800;
         letter-spacing: 0.08em;
-        color: var(--color-primary);
+        color: var(--color-secondary);
         margin: 0 0 12px 0;
       }
 
@@ -192,16 +182,16 @@ export function Settings(props: {
       .connect-btn, .disconnect-btn, .sync-btn {
         width: 100%;
         min-height: var(--tap-min);
-        border: var(--border-width) solid var(--color-primary);
+        border: var(--border-width) solid var(--color-secondary);
         background: var(--color-surface);
-        color: var(--color-primary);
+        color: var(--color-secondary);
         font-family: var(--font-family);
         font-weight: 800;
         font-size: clamp(0.75rem, 2vw, 0.875rem);
         letter-spacing: 0.06em;
         padding: 10px 24px;
         cursor: pointer;
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-secondary);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
         -webkit-tap-highlight-color: transparent;
         outline: none;
         margin-top: 4px;
@@ -210,8 +200,8 @@ export function Settings(props: {
       .connect-btn:active, .disconnect-btn:active, .sync-btn:active {
         transform: translate(2px, 2px); box-shadow: none;
       }
-      .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      .disconnect-btn { border-color: var(--color-tertiary); color: var(--color-tertiary); }
+      .connect-btn:disabled, .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .disconnect-btn { border-color: var(--color-tertiary); color: var(--color-tertiary); box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-tertiary); }
 
       .connection-status {
         display: flex; align-items: center; gap: 8px;
@@ -241,7 +231,7 @@ export function Settings(props: {
       .sync-label { color: var(--color-text-muted); }
       .sync-value { color: var(--color-secondary); font-weight: 800; }
 
-      .app-version { font-size: clamp(0.65rem, 1.5vw, 0.75rem); font-weight: 800; color: var(--color-primary); margin: 0; }
+      .app-version { font-size: clamp(0.65rem, 1.5vw, 0.75rem); font-weight: 800; color: var(--color-secondary); margin: 0; }
       .app-credits { font-size: clamp(0.55rem, 1.2vw, 0.65rem); color: var(--color-text-muted); margin: 2px 0 0 0; }
     </style>
   </>;

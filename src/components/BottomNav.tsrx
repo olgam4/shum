@@ -1,9 +1,6 @@
 import type { Tracked } from 'ripple';
 import type { Route, PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
-import { IconHome } from './icons/IconHome.tsrx';
-import { IconLibrary } from './icons/IconLibrary.tsrx';
-import { IconSettings } from './icons/IconSettings.tsrx';
 
 export function BottomNav(&{ route, track }: {
   route: Tracked<Route>;
@@ -11,35 +8,35 @@ export function BottomNav(&{ route, track }: {
 }) {
   return <>
     <nav class="bottom-nav">
-      <button class="nav-tab" data-active={route === 'home'} onClick={() => {
+      <button class="nav-tab" data-active={route.value === 'home'} onClick={() => {
         actions.haptic('selection');
-        route.value = 'home';
+        actions.navigate('home');
       }}>
-        <IconHome active={route === 'home'} />
+        <span class="nav-icon">{'⌘'}</span>
         <span class="nav-label">{'Home'}</span>
       </button>
-      <button class="nav-tab" data-active={route === 'library'} onClick={() => {
+      <button class="nav-tab" data-active={route.value === 'library'} onClick={() => {
         actions.haptic('selection');
-        route.value = 'library';
+        actions.navigate('library');
       }}>
-        <IconLibrary active={route === 'library'} />
+        <span class="nav-icon">{'▤'}</span>
         <span class="nav-label">{'Library'}</span>
       </button>
-      <button class="nav-tab" data-active={route === 'settings'} onClick={() => {
+      <button class="nav-tab" data-active={route.value === 'settings'} onClick={() => {
         actions.haptic('selection');
-        route.value = 'settings';
+        actions.navigate('settings');
       }}>
-        <IconSettings active={route === 'settings'} />
+        <span class="nav-icon">{'⛭'}</span>
         <span class="nav-label">{'Settings'}</span>
       </button>
     </nav>
 
     <style>
       .bottom-nav {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        height: calc(var(--bottom-nav-height) + var(--safe-bottom));
-        padding-bottom: var(--safe-bottom);
+        width: 100%;
+        flex-shrink: 0;
+        height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
         display: flex;
         background: var(--color-surface-elevated);
         border-top: var(--border-width) solid var(--color-primary);
@@ -65,12 +62,13 @@ export function BottomNav(&{ route, track }: {
       }
 
       .nav-tab[data-active='true'] {
-        color: var(--color-primary);
+        color: var(--color-secondary);
       }
 
-      .icon {
-        width: clamp(20px, 5vw, 26px);
-        height: clamp(20px, 5vw, 26px);
+      .nav-icon {
+        font-size: clamp(20px, 5vw, 26px);
+        line-height: 1;
+        text-align: center;
       }
 
       .nav-label {

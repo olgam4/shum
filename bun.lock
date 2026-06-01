@@ -7,6 +7,7 @@
       "dependencies": {
         "@tauri-apps/api": "^2.0.0",
         "ripple": "latest",
+        "tauri-plugin-native-audio-api": "^1.0.5",
       },
       "devDependencies": {
         "@ripple-ts/language-server": "latest",
@@ -400,6 +401,8 @@
     "strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
 
     "supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
+
+    "tauri-plugin-native-audio-api": ["tauri-plugin-native-audio-api@1.0.5", "", { "peerDependencies": { "@tauri-apps/api": ">=2.10.0" } }, "sha512-G1v9xEhdN0mLbVAIXflhCzqxiqB9gy9Gs1dV/lc2mlZTO0J11PVOhaxPLZgOSvIvXrq0iLT7cvP53dgG6mBGoQ=="],
 
     "tinyglobby": ["tinyglobby@0.2.17", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g=="],
 

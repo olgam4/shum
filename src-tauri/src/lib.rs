@@ -1,198 +1,78 @@
-mod audio;
 mod navidrome;
+mod state;
 mod storage;
 
-use audio::{AudioManager, AudioState, TrackMeta};
 use navidrome::{
-    CacheProgress, ConnectionStatus, LibrarySnapshot, NavidromeClient, NavidromeConfig,
+    CacheProgress, ConnectionStatus, NavidromeClient, NavidromeConfig,
     SearchResult,
 };
+use state::{AppState, Route};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use storage::{load_config, save_config, LibraryDb};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-type AudioManagerType = AudioManager<NativeAudio>;
+type AppStateType = Arc<Mutex<AppState>>;
 
-pub struct NativeAudio {
-    playback_position: f64,
+fn chrono_now() -> String {
+    use std::time::SystemTime;
+    let ts = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    format!("{}", ts)
 }
 
-impl NativeAudio {
-    pub fn new() -> Self {
-        Self {
-            playback_position: 0.0,
-        }
-    }
+// ─── UI Commands ───
+
+#[tauri::command]
+fn get_state(
+    app_state: State<'_, AppStateType>,
+) -> Result<AppState, String> {
+    let s = app_state.inner().lock().map_err(|e| e.to_string())?;
+    Ok(s.clone())
 }
 
-impl audio::AudioPlatform for NativeAudio {
-    fn load_url(&mut self, _url: &str) -> Result<(), String> {
-        log::info!("[NativeAudio] load_url: {}", _url);
-        self.playback_position = 0.0;
-        Ok(())
-    }
-
-    fn load_file(&mut self, path: &str) -> Result<(), String> {
-        log::info!("[NativeAudio] load_file: {}", path);
-        self.playback_position = 0.0;
-        Ok(())
-    }
-
-    fn play(&mut self) -> Result<(), String> {
-        log::info!("[NativeAudio] play");
-        Ok(())
-    }
-
-    fn pause(&mut self) -> Result<(), String> {
-        log::info!("[NativeAudio] pause");
-        Ok(())
-    }
-
-    fn stop(&mut self) -> Result<(), String> {
-        log::info!("[NativeAudio] stop");
-        self.playback_position = 0.0;
-        Ok(())
-    }
-
-    fn seek(&mut self, position_secs: f64) -> Result<(), String> {
-        log::info!("[NativeAudio] seek to {:.2}s", position_secs);
-        self.playback_position = position_secs;
-        Ok(())
-    }
-
-    fn set_volume(&mut self, volume: f64) -> Result<(), String> {
-        log::info!("[NativeAudio] set volume: {:.2}", volume);
-        Ok(())
-    }
-
-    fn current_position(&self) -> f64 {
-        self.playback_position
-    }
+#[tauri::command]
+fn navigate(
+    app_state: State<'_, AppStateType>,
+    app_handle: AppHandle,
+    route: Route,
+) -> Result<AppState, String> {
+    let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+    s.route = route;
+    let result = s.clone();
+    let _ = app_handle.emit("shum:state-changed", &result);
+    Ok(result)
 }
+
+#[tauri::command]
+fn set_player_open(
+    app_state: State<'_, AppStateType>,
+    app_handle: AppHandle,
+    open: bool,
+) -> Result<AppState, String> {
+    let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+    s.player_open = open;
+    let result = s.clone();
+    let _ = app_handle.emit("shum:state-changed", &result);
+    Ok(result)
+}
+
+// ─── Navidrome Commands ───
 
 struct NavidromeState {
     client: Option<NavidromeClient>,
 }
 
-// ─── Audio Commands ───
-
-#[tauri::command]
-fn play_track(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-    id: String,
-    title: String,
-    artist: String,
-    album: String,
-    duration_secs: f64,
-    cover_art_url: Option<String>,
-    stream_url: String,
-    local_path: Option<String>,
-) -> Result<AudioState, String> {
-    log::info!("[play_track] {} - {}", artist, title);
-
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let track = TrackMeta {
-        id,
-        title,
-        artist,
-        album,
-        duration_secs,
-        cover_art_url,
-    };
-
-    let result = AudioManagerType::play_track(
-        &manager.state(),
-        &manager.platform(),
-        track,
-        stream_url,
-        local_path,
-    )?;
-
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn pause(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let result = AudioManagerType::pause(&manager.state(), &manager.platform())?;
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn resume(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let result = AudioManagerType::resume(&manager.state(), &manager.platform())?;
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn stop(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let result = AudioManagerType::stop(&manager.state(), &manager.platform())?;
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn seek(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-    position_secs: f64,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let result =
-        AudioManagerType::seek(&manager.state(), &manager.platform(), position_secs)?;
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn set_volume(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-    app_handle: AppHandle,
-    volume: f64,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let result =
-        AudioManagerType::set_volume(&manager.state(), &manager.platform(), volume)?;
-    let _ = app_handle.emit("shum:state-changed", &result);
-    Ok(result)
-}
-
-#[tauri::command]
-fn get_state(
-    state: State<'_, Arc<Mutex<AudioManagerType>>>,
-) -> Result<AudioState, String> {
-    let manager = state.inner().lock().map_err(|e| e.to_string())?;
-    let binding = manager.state();
-    let s = binding.lock().map_err(|e| e.to_string())?;
-    Ok(s.clone())
-}
-
-// ─── Navidrome Commands ───
-
 #[tauri::command]
 async fn connect_server(
     nav_state: State<'_, Arc<Mutex<NavidromeState>>>,
+    app_state: State<'_, AppStateType>,
     app_handle: AppHandle,
     server_url: String,
     username: String,
     password: String,
-) -> Result<ConnectionStatus, String> {
+) -> Result<AppState, String> {
     let password_hex = format!("enc:{}", hex::encode(password.as_bytes()));
 
     let config = NavidromeConfig {
@@ -217,8 +97,12 @@ async fn connect_server(
                 server_version: Some(server_version),
                 error: None,
             };
-            let _ = app_handle.emit("shum:connection-changed", &status);
-            Ok(status)
+
+            let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+            s.connection_status = status;
+            let result = s.clone();
+            let _ = app_handle.emit("shum:state-changed", &result);
+            Ok(result)
         }
         Err(e) => {
             let status = ConnectionStatus {
@@ -227,8 +111,12 @@ async fn connect_server(
                 server_version: None,
                 error: Some(e),
             };
-            let _ = app_handle.emit("shum:connection-changed", &status);
-            Ok(status)
+
+            let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+            s.connection_status = status;
+            let result = s.clone();
+            let _ = app_handle.emit("shum:state-changed", &result);
+            Ok(result)
         }
     }
 }
@@ -236,8 +124,9 @@ async fn connect_server(
 #[tauri::command]
 fn disconnect(
     nav_state: State<'_, Arc<Mutex<NavidromeState>>>,
+    app_state: State<'_, AppStateType>,
     app_handle: AppHandle,
-) -> Result<ConnectionStatus, String> {
+) -> Result<AppState, String> {
     let mut ns = nav_state.inner().lock().map_err(|e| e.to_string())?;
     ns.client = None;
 
@@ -252,8 +141,21 @@ fn disconnect(
         server_version: None,
         error: None,
     };
-    let _ = app_handle.emit("shum:connection-changed", &status);
-    Ok(status)
+
+    let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+    s.connection_status = status;
+    s.library = SearchResult {
+        artists: vec![],
+        albums: vec![],
+        songs: vec![],
+    };
+    s.library_artist_count = 0;
+    s.library_album_count = 0;
+    s.library_song_count = 0;
+    s.library_last_sync = None;
+    let result = s.clone();
+    let _ = app_handle.emit("shum:state-changed", &result);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -273,84 +175,112 @@ fn get_connection_status(
 async fn sync_library(
     nav_state: State<'_, Arc<Mutex<NavidromeState>>>,
     lib_db: State<'_, Arc<LibraryDb>>,
+    app_state: State<'_, AppStateType>,
     app_handle: AppHandle,
-) -> Result<LibrarySnapshot, String> {
-    let client = {
-        let ns = nav_state.inner().lock().map_err(|e| e.to_string())?;
-        ns.client.clone().ok_or("not connected")?
-    };
-
-    lib_db.clear()?;
-
-    let mut all_songs = Vec::new();
-    let mut all_albums = Vec::new();
-    let mut all_artists = Vec::new();
-
-    let batch_size: u32 = 500;
-    let mut song_offset: u32 = 0;
-    let mut album_offset: u32 = 0;
-    let mut artist_offset: u32 = 0;
-
-    loop {
-        let results = client
-            .search3("", artist_offset, batch_size, album_offset, batch_size, song_offset, batch_size)
-            .await?;
-
-        if results.songs.is_empty() && results.albums.is_empty() && results.artists.is_empty() {
-            break;
-        }
-
-        for song in &results.songs {
-            lib_db.insert_song(song)?;
-        }
-        for album in &results.albums {
-            lib_db.insert_album(album)?;
-        }
-        for artist in &results.artists {
-            lib_db.insert_artist(artist)?;
-        }
-
-        all_songs.extend(results.songs);
-        all_albums.extend(results.albums);
-        all_artists.extend(results.artists);
-
-        song_offset += batch_size;
-        album_offset += batch_size;
-        artist_offset += batch_size;
+) -> Result<AppState, String> {
+    {
+        let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+        s.syncing = true;
+        let result = s.clone();
+        let _ = app_handle.emit("shum:state-changed", &result);
     }
 
-    let now = chrono_now();
-    lib_db.set_last_sync(&now)?;
+    let sync_result = async {
+        let client = {
+            let ns = nav_state.inner().lock().map_err(|e| e.to_string())?;
+            ns.client.clone().ok_or("not connected")?
+        };
 
-    let snapshot = LibrarySnapshot {
-        artist_count: lib_db.artist_count(),
-        album_count: lib_db.album_count(),
-        song_count: lib_db.song_count(),
-        last_sync: now,
-    };
+        lib_db.clear()?;
 
-    let _ = app_handle.emit("shum:library-synced", &snapshot);
-    Ok(snapshot)
+        let batch_size: u32 = 500;
+        let mut song_offset: u32 = 0;
+        let mut album_offset: u32 = 0;
+        let mut artist_offset: u32 = 0;
+
+        loop {
+            let results = client
+                .search3("", artist_offset, batch_size, album_offset, batch_size, song_offset, batch_size)
+                .await?;
+
+            if results.songs.is_empty() && results.albums.is_empty() && results.artists.is_empty() {
+                break;
+            }
+
+            for song in &results.songs {
+                lib_db.insert_song(song)?;
+            }
+            for album in &results.albums {
+                lib_db.insert_album(album)?;
+            }
+            for artist in &results.artists {
+                lib_db.insert_artist(artist)?;
+            }
+
+            song_offset += batch_size;
+            album_offset += batch_size;
+            artist_offset += batch_size;
+        }
+
+        let now = chrono_now();
+        lib_db.set_last_sync(&now)?;
+        Ok(now)
+    }.await;
+
+    match sync_result {
+        Ok(now) => {
+            let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+            s.library = SearchResult {
+                artists: lib_db.get_all_artists(),
+                albums: lib_db.get_all_albums(),
+                songs: lib_db.get_all_songs(),
+            };
+            s.library_artist_count = lib_db.artist_count();
+            s.library_album_count = lib_db.album_count();
+            s.library_song_count = lib_db.song_count();
+            s.library_last_sync = Some(now);
+            s.syncing = false;
+            let result = s.clone();
+            let _ = app_handle.emit("shum:state-changed", &result);
+            Ok(result)
+        }
+        Err(e) => {
+            if let Ok(mut s) = app_state.inner().lock() {
+                s.syncing = false;
+                let result = s.clone();
+                let _ = app_handle.emit("shum:state-changed", &result);
+            }
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
 async fn search_library(
     lib_db: State<'_, Arc<LibraryDb>>,
+    app_state: State<'_, AppStateType>,
+    app_handle: AppHandle,
     query: String,
-) -> Result<SearchResult, String> {
-    if query.is_empty() {
-        return Ok(SearchResult {
+) -> Result<AppState, String> {
+    let results = if query.is_empty() {
+        SearchResult {
             artists: lib_db.get_all_artists(),
             albums: lib_db.get_all_albums(),
             songs: lib_db.get_all_songs(),
-        });
-    }
+        }
+    } else {
+        SearchResult {
+            artists: lib_db.search_artists(&query),
+            albums: lib_db.search_albums(&query),
+            songs: lib_db.search_songs(&query),
+        }
+    };
 
-    Ok(SearchResult {
-        artists: lib_db.search_artists(&query),
-        albums: lib_db.search_albums(&query),
-        songs: lib_db.search_songs(&query),
-    })
+    let mut s = app_state.inner().lock().map_err(|e| e.to_string())?;
+    s.library = results;
+    let result = s.clone();
+    let _ = app_handle.emit("shum:state-changed", &result);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -435,39 +365,25 @@ fn get_cached_song_path(
     }
 }
 
-// ─── Helpers ───
-
-fn chrono_now() -> String {
-    use std::time::SystemTime;
-    let ts = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    format!("{}", ts)
-}
-
 // ─── Entry Point ───
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     log::info!("[SHUM] starting Tauri v2 mobile backend");
 
-    let audio_manager = Arc::new(Mutex::new(AudioManager::new(NativeAudio::new())));
     let nav_state = Arc::new(Mutex::new(NavidromeState { client: None }));
+    let app_state: AppStateType = Arc::new(Mutex::new(AppState::default()));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_haptics::init())
-        .manage(audio_manager)
+        .plugin(tauri_plugin_native_audio::init())
         .manage(nav_state)
+        .manage(app_state.clone())
         .invoke_handler(tauri::generate_handler![
-            play_track,
-            pause,
-            resume,
-            stop,
-            seek,
-            set_volume,
             get_state,
+            navigate,
+            set_player_open,
             connect_server,
             disconnect,
             get_connection_status,
@@ -478,13 +394,12 @@ pub fn run() {
             cache_song,
             get_cached_song_path,
         ])
-        .setup(|app| {
+        .setup(move |app| {
             log::info!("[SHUM] Tauri v2 mobile backend initialised");
 
             let app_dir = app.path().app_data_dir().map_err(|e| e.to_string()).unwrap_or_default();
             std::fs::create_dir_all(&app_dir).ok();
 
-            // Restore saved connection
             let config_exists = load_config(&app_dir).is_some();
             log::info!("[SHUM] config file present: {}", config_exists);
             if let Some(config) = load_config(&app_dir) {
@@ -492,6 +407,7 @@ pub fn run() {
                 let client = NavidromeClient::new(config);
                 let handle = app.handle().clone();
                 let ns_clone = app.state::<Arc<Mutex<NavidromeState>>>().inner().clone();
+                let as_clone = app_state.clone();
 
                 tauri::async_runtime::spawn(async move {
                     match client.ping().await {
@@ -507,7 +423,13 @@ pub fn run() {
                                 server_version: Some(server_version),
                                 error: None,
                             };
-                            let _ = handle.emit("shum:connection-changed", &status);
+
+                            if let Ok(mut s) = as_clone.lock() {
+                                s.connection_status = status;
+                                let result = s.clone();
+                                drop(s);
+                                let _ = handle.emit("shum:state-changed", &result);
+                            }
                         }
                         Err(e) => {
                             log::warn!("[SHUM] auto-connect failed: {}", e);
@@ -517,7 +439,13 @@ pub fn run() {
                                 server_version: None,
                                 error: Some(e),
                             };
-                            let _ = handle.emit("shum:connection-changed", &status);
+
+                            if let Ok(mut s) = as_clone.lock() {
+                                s.connection_status = status;
+                                let result = s.clone();
+                                drop(s);
+                                let _ = handle.emit("shum:state-changed", &result);
+                            }
                         }
                     }
                 });
@@ -525,51 +453,28 @@ pub fn run() {
                 log::info!("[SHUM] no saved config, skipping auto-connect");
             }
 
-            // Open library DB
             let lib_db = Arc::new(LibraryDb::open(&app_dir).unwrap_or_else(|_| {
                 LibraryDb::open(&app_dir).expect("unrecoverable sled DB error")
             }));
             app.manage(lib_db.clone());
 
-            let handle = app.handle().clone();
-            let audio_arc = app.state::<Arc<Mutex<AudioManagerType>>>().inner().clone();
+            let handle_setup = app.handle().clone();
 
-            std::thread::spawn(move || {
-                let position_interval = Duration::from_millis(500);
-                loop {
-                    std::thread::sleep(position_interval);
-                    let manager = match audio_arc.lock() {
-                        Ok(m) => m,
-                        Err(_) => break,
-                    };
-                    let result = AudioManagerType::tick_position(
-                        &manager.state(),
-                        &manager.platform(),
-                    );
-                    match result {
-                        Ok(audio_state) => {
-                            let _ = handle.emit("shum:position-tick", &audio_state);
-                        }
-                        Err(e) => {
-                            log::error!("[SHUM] position tick error: {}", e);
-                        }
-                    }
-                }
-            });
-
-            // Emit library snapshot on startup
             if lib_db.song_count() > 0 {
-                let snapshot = LibrarySnapshot {
-                    artist_count: lib_db.artist_count(),
-                    album_count: lib_db.album_count(),
-                    song_count: lib_db.song_count(),
-                    last_sync: lib_db.get_last_sync().unwrap_or_default(),
-                };
-                let h = app.handle().clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(Duration::from_millis(300));
-                    let _ = h.emit("shum:library-synced", &snapshot);
-                });
+                if let Ok(mut s) = app_state.lock() {
+                    s.library = SearchResult {
+                        artists: lib_db.get_all_artists(),
+                        albums: lib_db.get_all_albums(),
+                        songs: lib_db.get_all_songs(),
+                    };
+                    s.library_artist_count = lib_db.artist_count();
+                    s.library_album_count = lib_db.album_count();
+                    s.library_song_count = lib_db.song_count();
+                    s.library_last_sync = lib_db.get_last_sync();
+                    let result = s.clone();
+                    drop(s);
+                    let _ = handle_setup.emit("shum:state-changed", &result);
+                }
             }
 
             Ok(())

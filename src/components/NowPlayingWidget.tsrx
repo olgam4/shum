@@ -13,32 +13,32 @@ export function NowPlayingWidget(&{ track, playbackState, artist, progressPercen
   return <>
     <div class="widget" onClick={() => {
       actions.haptic('light');
-      playerOpen.value = true;
+      actions.openPlayer();
     }}>
       <div class="widget-progress-bar">
-        <div class="widget-progress-fill" style={{ '--p': progressPercent }} />
+        <div class="widget-progress-fill" style={{ '--p': progressPercent.value }} />
       </div>
       <div class="widget-inner">
         <div class="widget-info">
-          <span class="widget-title">{track?.title ?? '—'}</span>
+          <span class="widget-title">{track.value?.title ?? '—'}</span>
           <span class="widget-artist">{artist}</span>
         </div>
         <button class="widget-play-btn" onClick={(e) => {
           e.stopPropagation();
           actions.haptic('light');
-          if (playbackState === 'playing') actions.requestPause();
-          else actions.requestPlay(track);
+          if (playbackState.value === 'playing') actions.requestPause();
+          else actions.requestPlay(track.value);
         }}>
-          {playbackState === 'playing' ? '■' : '▶'}
+          {playbackState.value === 'playing' ? '■' : '▶'}
         </button>
       </div>
     </div>
 
     <style>
       .widget {
-        position: fixed;
-        bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
-        left: 0; right: 0;
+        width: 100%;
+        flex-shrink: 0;
+        height: var(--widget-height);
         background: var(--color-surface-elevated);
         border-top: var(--border-width) solid var(--color-primary);
         cursor: pointer;
@@ -81,7 +81,7 @@ export function NowPlayingWidget(&{ track, playbackState, artist, progressPercen
       .widget-title {
         font-size: clamp(0.7rem, 1.8vw, 0.8rem);
         font-weight: 800;
-        color: var(--color-primary);
+        color: var(--color-text);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;

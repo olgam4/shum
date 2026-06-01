@@ -41,8 +41,8 @@ export function Header() {
       }
 
       .char-b {
-        color: var(--color-primary);
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-secondary);
+        color: var(--color-secondary);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
       }
 
       .char-c {

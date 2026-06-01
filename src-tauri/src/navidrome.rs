@@ -8,6 +8,7 @@ pub struct NavidromeConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LibrarySong {
     pub id: String,
     pub title: String,
@@ -26,6 +27,7 @@ pub struct LibrarySong {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LibraryAlbum {
     pub id: String,
     pub name: String,
@@ -38,6 +40,7 @@ pub struct LibraryAlbum {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LibraryArtist {
     pub id: String,
     pub name: String,
@@ -46,6 +49,7 @@ pub struct LibraryArtist {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SearchResult {
     pub artists: Vec<LibraryArtist>,
     pub albums: Vec<LibraryAlbum>,
@@ -53,6 +57,7 @@ pub struct SearchResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConnectionStatus {
     pub connected: bool,
     pub server_name: Option<String>,
@@ -61,14 +66,7 @@ pub struct ConnectionStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibrarySnapshot {
-    pub artist_count: u32,
-    pub album_count: u32,
-    pub song_count: u32,
-    pub last_sync: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CacheProgress {
     pub song_id: String,
     pub status: String,

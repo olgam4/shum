@@ -80,3 +80,31 @@ export interface CacheProgress {
 }
 
 export type Route = 'home' | 'library' | 'settings';
+
+export interface AppState {
+  connectionStatus: ConnectionInfo;
+  library: SearchResult;
+  libraryArtistCount: number;
+  libraryAlbumCount: number;
+  librarySongCount: number;
+  libraryLastSync: string | null;
+  syncing: boolean;
+  route: Route;
+  playerOpen: boolean;
+}
+
+export interface PositionTick {
+  positionSecs: number;
+}
+
+export type NativeAudioStatus = 'idle' | 'loading' | 'playing' | 'ended' | 'error';
+
+export interface NativeAudioState {
+  status: NativeAudioStatus;
+  currentTime: number;
+  duration: number;
+  isPlaying: boolean;
+  buffering: boolean;
+  rate: number;
+  error?: string;
+}

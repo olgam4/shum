@@ -2,7 +2,7 @@ import { listen } from '@tauri-apps/api/event';
 import { effect } from 'ripple';
 import { initState } from './state';
 import { actions } from './actions';
-import type { AudioState, ConnectionInfo, LibrarySnapshot, SearchResult } from './types';
+import type { AppState } from './types';
 import { Header } from './components/Header.tsrx';
 import { BottomNav } from './components/BottomNav.tsrx';
 import { Home } from './components/Home.tsrx';
@@ -16,25 +16,11 @@ export function App() {
   const unlistenFns: (() => void)[] = [];
 
   effect(() => {
-    listen<AudioState>('shum:state-changed', (e) => s.applyAudioState(e.payload))
-      .then((fn) => unlistenFns.push(fn)).catch(() => {});
-    listen<AudioState>('shum:position-tick', (e) => {
-      s.progress.value = e.payload.positionSecs;
-    }).then((fn) => unlistenFns.push(fn)).catch(() => {});
-    listen<ConnectionInfo>('shum:connection-changed', (e) => s.applyConnection(e.payload))
-      .then((fn) => unlistenFns.push(fn)).catch(() => {});
-    listen<LibrarySnapshot>('shum:library-synced', (e) => {
-      s.applyLibrarySnapshot(e.payload);
-      if (e.payload.songCount > 0) {
-        s.syncing.value = true;
-        actions.searchLibrary('').then((r: any) => {
-          s.applySearchResults(r);
-          s.syncing.value = false;
-        }).catch(() => { s.syncing.value = false; });
-      }
-    })
-      .then((fn) => unlistenFns.push(fn)).catch(() => {});
-    listen<SearchResult>('shum:search-results', (e) => s.applySearchResults(e.payload))
+    actions.initAudio()
+      .then(() => actions.getState().then((state) => s.applyState(state)).catch(() => {}))
+      .catch(() => {});
+
+    listen<AppState>('shum:state-changed', (e) => s.applyState(e.payload))
       .then((fn) => unlistenFns.push(fn)).catch(() => {});
 
     return () => unlistenFns.forEach((fn) => fn());
@@ -74,8 +60,7 @@ export function App() {
                           playerOpen={s.playerOpen}
                           route={s.route} />
       }
-      <BottomNav route={s.route} playbackState={s.playbackState}
-                 track={s.track} />
+      <BottomNav route={s.route} track={s.track} />
     </div>
     if (s.playerOpen.value) {
       <Player track={s.track} playbackState={s.playbackState}
@@ -107,8 +92,6 @@ export function App() {
         --tap-min: 44px;
         --bottom-nav-height: 56px;
         --widget-height: 56px;
-        --safe-bottom: env(safe-area-inset-bottom, 0px);
-        --safe-top: env(safe-area-inset-top, 0px);
       }
 
       :global(body), :global(html), :global(#root) {
@@ -122,21 +105,27 @@ export function App() {
         -webkit-user-select: none;
         user-select: none;
         touch-action: manipulation;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
       }
 
       .app-root {
         height: 100dvh; width: 100%;
         display: flex; flex-direction: column;
+        overflow: hidden;
         position: relative;
-        padding-top: var(--safe-top);
+        z-index: 0;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
       }
 
       .page-content {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
       }
     </style>
   </>;
