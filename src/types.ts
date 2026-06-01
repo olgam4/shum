@@ -2,19 +2,16 @@ export interface TrackMeta {
   id: string;
   title: string;
   artist: string;
+  artistId: string;
   album: string;
+  albumId: string;
   durationSecs: number;
   coverArtUrl: string | null;
+  contentType: string;
+  suffix: string;
 }
 
-export type PlaybackState = 'playing' | 'paused' | 'stopped' | 'buffering';
-
-export interface AudioState {
-  currentTrack: TrackMeta | null;
-  playbackState: PlaybackState;
-  volume: number;
-  positionSecs: number;
-}
+export type PlaybackState = 'playing' | 'paused' | 'stopped' | 'buffering' | 'error';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -66,11 +63,19 @@ export interface SearchResult {
   songs: LibrarySong[];
 }
 
-export interface LibrarySnapshot {
+export interface SyncResult {
+  artists: LibraryArtist[];
+  albums: LibraryAlbum[];
+  songs: LibrarySong[];
   artistCount: number;
   albumCount: number;
   songCount: number;
-  lastSync: string;
+  lastSync: string | null;
+}
+
+export interface StartupState {
+  connectionStatus: ConnectionInfo;
+  library: SyncResult | null;
 }
 
 export interface CacheProgress {
@@ -79,23 +84,7 @@ export interface CacheProgress {
   localPath?: string;
 }
 
-export type Route = 'home' | 'library' | 'settings';
-
-export interface AppState {
-  connectionStatus: ConnectionInfo;
-  library: SearchResult;
-  libraryArtistCount: number;
-  libraryAlbumCount: number;
-  librarySongCount: number;
-  libraryLastSync: string | null;
-  syncing: boolean;
-  route: Route;
-  playerOpen: boolean;
-}
-
-export interface PositionTick {
-  positionSecs: number;
-}
+export type Route = 'home' | 'library' | 'settings' | 'artist' | 'album';
 
 export type NativeAudioStatus = 'idle' | 'loading' | 'playing' | 'ended' | 'error';
 

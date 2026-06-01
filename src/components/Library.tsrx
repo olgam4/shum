@@ -1,32 +1,24 @@
-import type { Tracked } from 'ripple';
-import { track } from 'ripple';
-import type { ConnectionStatus, Route, SearchResult, LibrarySong, LibraryAlbum, LibraryArtist } from '../types';
+import { track, type Tracked } from 'ripple';
+import type { ConnectionStatus, SearchResult, LibrarySong, LibraryAlbum, LibraryArtist } from '../types';
 import { actions } from '../actions';
 import { formatTime } from '../state';
+import { libraryCtx, connectionCtx, routeCtx, ctx } from '../context';
 
 const ROW_HEIGHT = 44;
 const OVERSCAN = 10;
 
-export function Library(&{ library, connection, route, syncing }: {
-  library: Tracked<SearchResult>;
-  connection: Tracked<ConnectionStatus>;
-  route: Tracked<Route>;
-  syncing: Tracked<boolean>;
-}) {
+export function Library() {
   const _searchQuery = track('');
-  const _libraryFilter = track<{ type: 'artist' | 'album'; id: string; name: string } | null>(null);
   const _scrollTop = track(0);
   const _containerHeight = track(640);
   let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let _rafId = 0;
 
-  const _filteredSongs = track(() => {
-    const filter = _libraryFilter.value;
-    const songs = library.value.songs;
-    if (!filter) return songs;
-    if (filter.type === 'artist') return songs.filter(s => s.artistId === filter.id);
-    return songs.filter(s => s.albumId === filter.id);
-  });
+  const lib = libraryCtx.get();
+  const conn = connectionCtx.get();
+  const rt = routeCtx.get();
+
+  const songs = track(() => lib.data.value.songs);
 
   const _startIndex = track(() =>
     Math.max(0, Math.floor(_scrollTop.value / ROW_HEIGHT) - OVERSCAN)
@@ -34,13 +26,13 @@ export function Library(&{ library, connection, route, syncing }: {
 
   const _endIndex = track(() =>
     Math.min(
-      _filteredSongs.value.length,
+      songs.value.length,
       Math.ceil((_scrollTop.value + _containerHeight.value) / ROW_HEIGHT) + OVERSCAN
     )
   );
 
   const _visibleSongs = track(() =>
-    _filteredSongs.value.slice(_startIndex.value, _endIndex.value)
+    songs.value.slice(_startIndex.value, _endIndex.value)
   );
 
   const onSearchInput = (e: Event) => {
@@ -48,7 +40,9 @@ export function Library(&{ library, connection, route, syncing }: {
     _searchQuery.value = value;
     if (_debounceTimer) clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(() => {
-      actions.searchLibrary(value).catch(() => {});
+      actions.searchLibrary(value).then((result) => {
+        lib.data.value = result;
+      }).catch(() => {});
     }, 200);
   };
 
@@ -61,34 +55,40 @@ export function Library(&{ library, connection, route, syncing }: {
     });
   };
 
-  const handleChipClick = (type: 'artist' | 'album', id: string, name: string) => {
+  const navToArtist = (id: string, name: string) => {
     actions.haptic('selection');
-    const filter = _libraryFilter.value;
-    if (filter?.type === type && filter?.id === id) {
-      _libraryFilter.value = null;
-    } else {
-      _libraryFilter.value = { type, id, name };
-    }
+    ctx.selectedArtist.id.value = id;
+    ctx.selectedArtist.name.value = name;
+    rt.current.value = 'artist';
+  };
+
+  const navToAlbum = (id: string, name: string, artistId: string, artistName: string) => {
+    actions.haptic('selection');
+    ctx.selectedAlbum.id.value = id;
+    ctx.selectedAlbum.name.value = name;
+    ctx.selectedAlbum.artistId.value = artistId;
+    ctx.selectedAlbum.artistName.value = artistName;
+    rt.current.value = 'album';
   };
 
   return <>
     <div class="library">
-      if (connection.value !== 'connected') {
+      if (conn.status.value !== 'connected') {
         <div class="library-state">
           <p>{'Connect to a server to browse your library.'}</p>
           <button class="lib-btn" onClick={() => {
             actions.haptic('light');
-            actions.navigate('settings');
+            rt.current.value = 'settings';
           }}>
             {'Go to Settings'}
           </button>
         </div>
-      } else if (syncing.value) {
+      } else if (lib.syncing.value) {
         <div class="library-state">
           <span class="syncing-dot" />
           <p>{'Syncing library...'}</p>
         </div>
-      } else if (library.value.artists.length === 0 && library.value.albums.length === 0 && library.value.songs.length === 0) {
+      } else if (lib.data.value.artists.length === 0 && lib.data.value.albums.length === 0 && lib.data.value.songs.length === 0) {
         <div class="library-state">
           <p>{'Library is empty.'}</p>
           <button class="lib-btn" onClick={() => {
@@ -109,85 +109,60 @@ export function Library(&{ library, connection, route, syncing }: {
           />
         </div>
 
-        if (library.value.artists.length > 0) {
+        if (lib.data.value.artists.length > 0) {
           <div class="chip-scroll">
-            for (const a of library.value.artists) {
-              <button
-                class="chip artist-chip"
-                data-active={_libraryFilter.value?.type === 'artist' && _libraryFilter.value?.id === a.id}
-                onClick={() => handleChipClick('artist', a.id, a.name)}
-              >
+            for (const a of lib.data.value.artists) {
+              <button class="chip artist-chip" onClick={() => navToArtist(a.id, a.name)}>
                 {a.name}
               </button>
             }
           </div>
         }
 
-        if (library.value.albums.length > 0) {
+        if (lib.data.value.albums.length > 0) {
           <div class="chip-scroll">
-            for (const a of library.value.albums) {
-              <button
-                class="chip album-chip"
-                data-active={_libraryFilter.value?.type === 'album' && _libraryFilter.value?.id === a.id}
-                onClick={() => handleChipClick('album', a.id, a.name)}
-              >
+            for (const a of lib.data.value.albums) {
+              <button class="chip album-chip" onClick={() => navToAlbum(a.id, a.name, a.artistId, a.artist)}>
                 {a.name}
               </button>
             }
           </div>
         }
 
-        if (_libraryFilter.value) {
-          <div class="active-filter">
-            <span class="filter-glyph">{_libraryFilter.value.type === 'artist' ? '⌖' : '◉'}</span>
-            <span class="filter-name">{_libraryFilter.value.name}</span>
-            <button class="filter-clear" onClick={() => {
-              actions.haptic('light');
-              _libraryFilter.value = null;
-            }}>{'✕'}</button>
-          </div>
-        }
-
-        if (_filteredSongs.value.length === 0) {
+        if (songs.value.length === 0) {
           <div class="library-state">
-            <p>{_libraryFilter.value ? `No songs for ${_libraryFilter.value.name}.` : 'No results.'}</p>
-            if (_libraryFilter.value) {
-              <button class="lib-btn" onClick={() => {
-                actions.haptic('light');
-                _libraryFilter.value = null;
-              }}>
-                {'Clear Filter'}
-              </button>
-            }
+            <p>{'No results.'}</p>
           </div>
         } else {
           <div class="song-container" onScroll={onScroll}>
             <div style={{ height: `${_startIndex.value * ROW_HEIGHT}px` }} />
-            for (const s of _visibleSongs.value) {
-              <button class="song-row" onClick={async () => {
+            for (const s of _visibleSongs.value; index i) {
+              <button class="song-row" data-even={(_startIndex.value + i) % 2 === 0} onClick={async () => {
                 actions.haptic('light');
-                actions.getCoverArtUrl(s.coverArt)
-                  .then((covUrl) => actions.requestPlaySong(s, covUrl))
-                  .catch(() => actions.haptic('error'));
+                actions.setQueue(s);
+                const covUrl = await actions.getCoverArtUrl(s.coverArt);
+                await actions.requestPlaySong(s, covUrl);
               }}>
                 <span class="song-track">{`${String(s.track).padStart(2, '0')}`}</span>
                 <span class="song-title">{s.title}</span>
                 <span class="song-artist">{s.artist}</span>
                 <span class="song-album">{s.album}</span>
                 <span class="song-duration">{formatTime(s.duration)}</span>
+                <span class="song-add" onClick={(e) => {
+                  e.stopPropagation();
+                  actions.haptic('selection');
+                  actions.addToQueue(s);
+                }}>{'+'}</span>
               </button>
             }
-            <div style={{ height: `${Math.max(0, (_filteredSongs.value.length - _endIndex.value) * ROW_HEIGHT)}px` }} />
+            <div style={{ height: `${Math.max(0, (songs.value.length - _endIndex.value) * ROW_HEIGHT)}px` }} />
           </div>
 
           <div class="lib-footer">
             <span class="footer-glyph">{'▸'}</span>
-            <span class="footer-count">{`${_filteredSongs.value.length} songs`}</span>
+            <span class="footer-count">{`${songs.value.length} songs`}</span>
             if (_searchQuery.value) {
               <span class="footer-query">{`matching "${_searchQuery.value}"`}</span>
-            }
-            if (_libraryFilter.value) {
-              <span class="footer-filter">{`· ${_libraryFilter.value.name}`}</span>
             }
           </div>
         }
@@ -389,7 +364,7 @@ export function Library(&{ library, connection, route, syncing }: {
 
       .song-row {
         display: grid;
-        grid-template-columns: 26px 2fr 1.3fr 1fr auto;
+        grid-template-columns: 26px 2fr 1.3fr 1fr auto auto;
         gap: 4px;
         align-items: center;
         width: 100%;
@@ -407,7 +382,7 @@ export function Library(&{ library, connection, route, syncing }: {
         outline: none;
       }
 
-      .song-row:nth-child(even) {
+      .song-row[data-even='true'] {
         background: oklch(15% 0.02 260 / 0.015);
       }
 
@@ -463,6 +438,28 @@ export function Library(&{ library, connection, route, syncing }: {
         text-align: right;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
+      }
+
+      .song-add {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-left: 4px;
+        border: 2px solid var(--color-secondary);
+        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-weight: 800;
+        color: var(--color-secondary);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      .song-add:active {
+        background: var(--color-secondary);
+        color: var(--color-surface);
       }
 
       .lib-footer {

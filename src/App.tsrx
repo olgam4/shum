@@ -1,8 +1,8 @@
-import { listen } from '@tauri-apps/api/event';
 import { effect } from 'ripple';
-import { initState } from './state';
+import { initContexts, ctx, routeCtx, playerOpenCtx, trackCtx, connectionCtx, libraryCtx } from './context';
 import { actions } from './actions';
-import type { AppState } from './types';
+import { computed } from './state';
+import { setupMediaSession } from './media-session';
 import { Header } from './components/Header.tsrx';
 import { BottomNav } from './components/BottomNav.tsrx';
 import { Home } from './components/Home.tsrx';
@@ -10,63 +10,65 @@ import { Library } from './components/Library.tsrx';
 import { Settings } from './components/Settings.tsrx';
 import { NowPlayingWidget } from './components/NowPlayingWidget.tsrx';
 import { Player } from './components/Player.tsrx';
+import { ArtistPage } from './components/ArtistPage.tsrx';
+import { AlbumPage } from './components/AlbumPage.tsrx';
 
 export function App() {
-  const s = initState();
-  const unlistenFns: (() => void)[] = [];
+  initContexts();
 
   effect(() => {
-    actions.initAudio()
-      .then(() => actions.getState().then((state) => s.applyState(state)).catch(() => {}))
-      .catch(() => {});
+    actions.initAudio().catch(() => {});
+    setupMediaSession();
 
-    listen<AppState>('shum:state-changed', (e) => s.applyState(e.payload))
-      .then((fn) => unlistenFns.push(fn)).catch(() => {});
-
-    return () => unlistenFns.forEach((fn) => fn());
+    actions.startupHydrate().then((state) => {
+      ctx.connection.info.value = state.connectionStatus;
+      ctx.connection.status.value = state.connectionStatus.connected ? 'connected' : 'disconnected';
+      if (state.library) {
+        ctx.library.data.value = { artists: state.library.artists, albums: state.library.albums, songs: state.library.songs };
+        ctx.library.artistCount.value = state.library.artistCount;
+        ctx.library.albumCount.value = state.library.albumCount;
+        ctx.library.songCount.value = state.library.songCount;
+        ctx.library.lastSync.value = state.library.lastSync;
+      }
+    }).catch(() => {});
   });
+
+  const rt = routeCtx.get();
+  const po = playerOpenCtx.get();
+  const tk = trackCtx.get();
+  const pb = computed;
 
   return <>
     <div class="app-root">
       <Header />
       <div class="page-content">
-        switch (s.route.value) {
+        switch (rt.current.value) {
           case 'home':
-            <Home track={s.track} playbackState={s.playbackState}
-                  connection={s.connection} route={s.route}
-                  syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
-                  syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
+            <Home />
             break;
           case 'library':
-            <Library library={s.library} connection={s.connection}
-                     route={s.route} syncing={s.syncing} />
+            <Library />
             break;
           case 'settings':
-            <Settings connection={s.connection} lastSync={s.lastSync}
-                      syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
-                      syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
+            <Settings />
+            break;
+          case 'artist':
+            <ArtistPage />
+            break;
+          case 'album':
+            <AlbumPage />
             break;
           default:
-            <Home track={s.track} playbackState={s.playbackState}
-                  connection={s.connection} route={s.route}
-                  syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
-                  syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
+            <Home />
         }
       </div>
-      if (s.track.value) {
-        <NowPlayingWidget track={s.track} playbackState={s.playbackState}
-                          artist={s.track.value?.artist ?? ''}
-                          progressPercent={s.progressPercent}
-                          playerOpen={s.playerOpen}
-                          route={s.route} />
+      if (tk.current.value) {
+        <NowPlayingWidget />
       }
-      <BottomNav route={s.route} track={s.track} />
+      <BottomNav />
     </div>
-    if (s.playerOpen.value) {
-      <Player track={s.track} playbackState={s.playbackState}
-              progress={s.progress} duration={s.duration}
-              progressPercent={s.progressPercent} volume={s.volume}
-              volumePercent={s.volumePercent} playerOpen={s.playerOpen} />
+    if (po.open.value) {
+      <Player />
     }
 
     <style>
@@ -90,8 +92,12 @@ export function App() {
         --shadow-offset: 4px;
         --font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
         --tap-min: 44px;
-        --bottom-nav-height: 56px;
+        --bottom-nav-height: 40px;
         --widget-height: 56px;
+      }
+
+      :global(*), :global(*::before), :global(*::after) {
+        box-sizing: border-box;
       }
 
       :global(body), :global(html), :global(#root) {

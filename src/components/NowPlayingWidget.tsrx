@@ -1,35 +1,48 @@
-import type { Tracked } from 'ripple';
-import type { PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
+import { trackCtx, playbackCtx, playerOpenCtx, routeCtx, ctx } from '../context';
 
-export function NowPlayingWidget(&{ track, playbackState, artist, progressPercent, playerOpen, route }: {
-  track: Tracked<TrackMeta | null>;
-  playbackState: Tracked<PlaybackState>;
-  artist: string;
-  progressPercent: Tracked<number>;
-  playerOpen: Tracked<boolean>;
-  route: Tracked<any>;
-}) {
+export function NowPlayingWidget() {
+  const tk = trackCtx.get();
+  const pb = playbackCtx.get();
+  const po = playerOpenCtx.get();
+  const rt = routeCtx.get();
+
   return <>
     <div class="widget" onClick={() => {
       actions.haptic('light');
-      actions.openPlayer();
+      po.open.value = true;
     }}>
       <div class="widget-progress-bar">
-        <div class="widget-progress-fill" style={{ '--p': progressPercent.value }} />
+        <div class="widget-progress-fill" style={{ '--p': 0 }} />
       </div>
       <div class="widget-inner">
         <div class="widget-info">
-          <span class="widget-title">{track.value?.title ?? '—'}</span>
-          <span class="widget-artist">{artist}</span>
+          <span class="widget-title">{tk.current.value?.title ?? '—'}</span>
+          <span class="widget-artist">
+            <button class="widget-artist-btn" onClick={(e) => {
+              e.stopPropagation();
+              if (tk.current.value?.artistId) {
+                actions.haptic('light');
+                ctx.selectedArtist.id.value = tk.current.value.artistId;
+                ctx.selectedArtist.name.value = tk.current.value.artist;
+                po.open.value = false;
+                rt.current.value = 'artist';
+              }
+            }}>
+              {tk.current.value?.artist ?? ''}
+            </button>
+            if (tk.current.value?.suffix) {
+              <span class="widget-format">{` · ${tk.current.value.suffix.toUpperCase()}`}</span>
+            }
+          </span>
         </div>
         <button class="widget-play-btn" onClick={(e) => {
           e.stopPropagation();
           actions.haptic('light');
-          if (playbackState.value === 'playing') actions.requestPause();
-          else actions.requestPlay(track.value);
+          if (pb.state.value === 'playing') actions.requestPause();
+          else actions.requestPlay(tk.current.value);
         }}>
-          {playbackState.value === 'playing' ? '■' : '▶'}
+          {pb.state.value === 'playing' ? '⏸︎' : '▶'}
         </button>
       </div>
     </div>
@@ -93,6 +106,38 @@ export function NowPlayingWidget(&{ track, playbackState, artist, progressPercen
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+      }
+
+      .widget-artist-btn {
+        font-size: inherit;
+        color: inherit;
+        font-family: var(--font-family);
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-decoration: underline;
+        text-decoration-color: oklch(15% 0.02 260 / 0.2);
+        text-underline-offset: 2px;
+        -webkit-tap-highlight-color: transparent;
+        outline: none;
+      }
+
+      .widget-artist-btn:active {
+        opacity: 0.6;
+      }
+
+      .widget-format {
+        font-weight: 700;
+        color: var(--color-text-muted);
+        opacity: 0.5;
+        font-size: clamp(0.5rem, 1.1vw, 0.6rem);
       }
 
       .widget-play-btn {

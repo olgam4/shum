@@ -1,34 +1,30 @@
-import type { Tracked } from 'ripple';
-import type { ConnectionStatus, Route, PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
+import { connectionCtx, libraryCtx, routeCtx, trackCtx, playbackCtx } from '../context';
 
-export function Home(&{ track, playbackState, connection, route, syncSongCount, syncAlbumCount, syncArtistCount, syncing }: {
-  track: Tracked<TrackMeta | null>;
-  playbackState: Tracked<PlaybackState>;
-  connection: Tracked<ConnectionStatus>;
-  route: Tracked<Route>;
-  syncSongCount: Tracked<number>;
-  syncAlbumCount: Tracked<number>;
-  syncArtistCount: Tracked<number>;
-  syncing: Tracked<boolean>;
-}) {
+export function Home() {
+  const conn = connectionCtx.get();
+  const lib = libraryCtx.get();
+  const rt = routeCtx.get();
+  const tk = trackCtx.get();
+  const pb = playbackCtx.get();
+
   return <>
     <div class="home">
-      if (!track.value) {
+      if (!tk.current.value) {
         <div class="welcome-card">
           <h2 class="welcome-title">{'Welcome'}</h2>
           <p class="welcome-sub">{'Welcome to SHUM'}</p>
-          if (syncing.value) {
+          if (lib.syncing.value) {
             <div class="syncing-state">
               <span class="syncing-dot" />
               <span class="syncing-text">{'Syncing library...'}</span>
             </div>
-          } else if (connection.value !== 'connected') {
+          } else if (conn.status.value !== 'connected') {
             <div class="connect-prompt">
               <p class="prompt-text">{'No server connected.'}</p>
               <button class="prompt-btn" onClick={() => {
                 actions.haptic('light');
-                actions.navigate('settings');
+                rt.current.value = 'settings';
               }}>
                 {'Connect to Navidrome'}
               </button>
@@ -36,15 +32,15 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
           } else {
             <div class="stats">
               <div class="stat-item">
-                <span class="stat-value">{syncSongCount.value}</span>
+                <span class="stat-value">{lib.songCount.value}</span>
                 <span class="stat-label">{'Songs'}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-value">{syncAlbumCount.value}</span>
+                <span class="stat-value">{lib.albumCount.value}</span>
                 <span class="stat-label">{'Albums'}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-value">{syncArtistCount.value}</span>
+                <span class="stat-value">{lib.artistCount.value}</span>
                 <span class="stat-label">{'Artists'}</span>
               </div>
             </div>

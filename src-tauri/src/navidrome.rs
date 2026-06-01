@@ -247,7 +247,7 @@ impl NavidromeClient {
             .map(|(k, v)| format!("{}={}", k, v))
             .collect();
         format!(
-            "{}/rest/stream?id={}&{}",
+            "{}/rest/stream?id={}&{}&format=mp3&maxBitRate=320",
             self.config.server_url,
             id,
             params.join("&")

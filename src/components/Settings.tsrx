@@ -1,21 +1,16 @@
 import { track } from 'ripple';
-import type { Tracked } from 'ripple';
-import type { ConnectionStatus } from '../types';
 import { actions } from '../actions';
+import { connectionCtx, libraryCtx } from '../context';
 
-export function Settings(props: {
-  connection: Tracked<ConnectionStatus>;
-  lastSync: Tracked<string | null>;
-  syncSongCount: Tracked<number>;
-  syncAlbumCount: Tracked<number>;
-  syncArtistCount: Tracked<number>;
-  syncing: Tracked<boolean>;
-}) {
+export function Settings() {
   const serverUrl  = track('');
   const username   = track('');
   const password   = track('');
   const busy = track(false);
   const errorMsg   = track<string | null>(null);
+
+  const conn = connectionCtx.get();
+  const lib = libraryCtx.get();
 
   const handleConnect = () => {
     actions.haptic('medium');
@@ -23,11 +18,12 @@ export function Settings(props: {
     errorMsg.value = null;
     actions.connectServer(serverUrl.value, username.value, password.value)
       .then((result: any) => {
-        if (result?.connectionStatus?.connected) {
-          busy.value = false;
+        busy.value = false;
+        if (result?.connected) {
+          conn.info.value = result;
+          conn.status.value = 'connected';
         } else {
-          busy.value = false;
-          errorMsg.value = result?.connectionStatus?.error ?? 'Connection failed';
+          errorMsg.value = result?.error ?? 'Connection failed';
         }
       })
       .catch((e: any) => {
@@ -39,10 +35,33 @@ export function Settings(props: {
   const handleSync = () => {
     actions.haptic('medium');
     errorMsg.value = null;
+    lib.syncing.value = true;
     actions.syncLibrary()
+      .then((result: any) => {
+        lib.data.value = { artists: result.artists, albums: result.albums, songs: result.songs };
+        lib.artistCount.value = result.artistCount;
+        lib.albumCount.value = result.albumCount;
+        lib.songCount.value = result.songCount;
+        lib.lastSync.value = result.lastSync;
+        lib.syncing.value = false;
+      })
       .catch((e: any) => {
+        lib.syncing.value = false;
         errorMsg.value = 'Sync failed: ' + String(e?.message ?? e);
       });
+  };
+
+  const handleDisconnect = () => {
+    actions.haptic('heavy');
+    actions.disconnect().then(() => {
+      conn.info.value = { connected: false };
+      conn.status.value = 'disconnected';
+      lib.data.value = { artists: [], albums: [], songs: [] };
+      lib.artistCount.value = 0;
+      lib.albumCount.value = 0;
+      lib.songCount.value = 0;
+      lib.lastSync.value = null;
+    }).catch(() => {});
   };
 
   return <>
@@ -53,36 +72,33 @@ export function Settings(props: {
         <div class="input-group">
           <label class="input-label">{'Server URL'}</label>
           <input class="input-field" type="url" placeholder="https://navidrome.example.com"
-                 value={serverUrl.value} onInput={(e) => serverUrl.value = e.target.value} />
+                 value={serverUrl.value} onInput={(e) => serverUrl.value = (e.target as HTMLInputElement).value} />
         </div>
 
         <div class="input-group">
           <label class="input-label">{'Username'}</label>
           <input class="input-field" type="text" placeholder="admin"
-                 value={username.value} onInput={(e) => username.value = e.target.value} />
+                 value={username.value} onInput={(e) => username.value = (e.target as HTMLInputElement).value} />
         </div>
 
         <div class="input-group">
           <label class="input-label">{'Password'}</label>
           <input class="input-field" type="password" placeholder="••••••••"
-                 value={password.value} onInput={(e) => password.value = e.target.value} />
+                 value={password.value} onInput={(e) => password.value = (e.target as HTMLInputElement).value} />
         </div>
 
-        if (props.connection.value !== 'connected') {
+        if (conn.status.value !== 'connected') {
           <button class="connect-btn" disabled={busy.value} onClick={handleConnect}>
             {busy.value ? 'CONNECTING...' : 'CONNECT'}
           </button>
         } else {
-          <button class="disconnect-btn" onClick={() => {
-            actions.haptic('heavy');
-            actions.disconnect();
-          }}>
+          <button class="disconnect-btn" onClick={handleDisconnect}>
             {'DISCONNECT'}
           </button>
         }
 
         <div class="connection-status">
-          switch (props.connection.value) {
+          switch (conn.status.value) {
             case 'connected':
               <span class="status-dot" data-state="connected" />
               <span class="status-text connected">{'Connected'}</span>
@@ -98,24 +114,24 @@ export function Settings(props: {
         </div>
       </div>
 
-      if (props.connection.value === 'connected') {
+      if (conn.status.value === 'connected') {
         <div class="section">
           <h3 class="section-title">{'Sync'}</h3>
-          <button class="sync-btn" disabled={props.syncing.value} onClick={handleSync}>
-            {props.syncing.value ? 'SYNCING...' : 'SYNC'}
+          <button class="sync-btn" disabled={lib.syncing.value} onClick={handleSync}>
+            {lib.syncing.value ? 'SYNCING...' : 'SYNC'}
           </button>
           <div class="sync-stats">
             <div class="sync-row">
               <span class="sync-label">{'Songs'}</span>
-              <span class="sync-value">{props.syncSongCount.value}</span>
+              <span class="sync-value">{lib.songCount.value}</span>
             </div>
             <div class="sync-row">
               <span class="sync-label">{'Albums'}</span>
-              <span class="sync-value">{props.syncAlbumCount.value}</span>
+              <span class="sync-value">{lib.albumCount.value}</span>
             </div>
             <div class="sync-row">
               <span class="sync-label">{'Artists'}</span>
-              <span class="sync-value">{props.syncArtistCount.value}</span>
+              <span class="sync-value">{lib.artistCount.value}</span>
             </div>
           </div>
         </div>
