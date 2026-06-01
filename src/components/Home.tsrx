@@ -2,7 +2,7 @@ import type { Tracked } from 'ripple';
 import type { ConnectionStatus, Route, PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
 
-export function Home(&{ track, playbackState, connection, route, syncSongCount, syncAlbumCount, syncArtistCount }: {
+export function Home(&{ track, playbackState, connection, route, syncSongCount, syncAlbumCount, syncArtistCount, syncing }: {
   track: Tracked<TrackMeta | null>;
   playbackState: Tracked<PlaybackState>;
   connection: Tracked<ConnectionStatus>;
@@ -10,14 +10,20 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
   syncSongCount: Tracked<number>;
   syncAlbumCount: Tracked<number>;
   syncArtistCount: Tracked<number>;
+  syncing: Tracked<boolean>;
 }) {
   return <>
     <div class="home">
       if (!track) {
         <div class="welcome-card">
-          <h2 class="welcome-title">{'Добро пожаловать'}</h2>
+          <h2 class="welcome-title">{'Welcome'}</h2>
           <p class="welcome-sub">{'Welcome to SHUM'}</p>
-          if (connection !== 'connected') {
+          if (syncing) {
+            <div class="syncing-state">
+              <span class="syncing-dot" />
+              <span class="syncing-text">{'Syncing library...'}</span>
+            </div>
+          } else if (connection !== 'connected') {
             <div class="connect-prompt">
               <p class="prompt-text">{'No server connected.'}</p>
               <button class="prompt-btn" onClick={() => {
@@ -131,6 +137,31 @@ export function Home(&{ track, playbackState, connection, route, syncSongCount, 
         flex-direction: column;
         align-items: center;
         gap: 2px;
+      }
+
+      .syncing-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .syncing-dot {
+        width: 10px; height: 10px;
+        background: var(--color-primary);
+        animation: home-sync-pulse 0.8s step-end infinite;
+      }
+
+      @keyframes home-sync-pulse {
+        50% { opacity: 0; }
+      }
+
+      .syncing-text {
+        font-size: clamp(0.7rem, 1.8vw, 0.8rem);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--color-primary);
       }
 
       .stat-value {

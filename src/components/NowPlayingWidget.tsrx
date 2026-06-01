@@ -47,7 +47,7 @@ export function NowPlayingWidget(&{ track, playbackState, artist, progressPercen
       }
 
       .widget:active {
-        background: oklch(16% 0.02 260 / 0.95);
+        background: oklch(88% 0.02 90 / 0.95);
       }
 
       .widget-progress-bar {

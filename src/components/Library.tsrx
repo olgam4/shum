@@ -2,10 +2,11 @@ import type { Tracked } from 'ripple';
 import type { ConnectionStatus, Route, SearchResult, LibrarySong, LibraryAlbum, LibraryArtist } from '../types';
 import { actions } from '../actions';
 
-export function Library(&{ library, connection, route }: {
+export function Library(&{ library, connection, route, syncing }: {
   library: Tracked<SearchResult>;
   connection: Tracked<ConnectionStatus>;
   route: Tracked<Route>;
+  syncing: Tracked<boolean>;
 }) {
   return <>
     <div class="library">
@@ -19,6 +20,11 @@ export function Library(&{ library, connection, route }: {
             {'Go to Settings'}
           </button>
         </div>
+      } else if (syncing) {
+        <div class="empty-lib">
+          <span class="syncing-dot" />
+          <p>{'Syncing library...'}</p>
+        </div>
       } else if (library.artists.length === 0 && library.albums.length === 0 && library.songs.length === 0) {
         <div class="empty-lib">
           <p>{'Library is empty.'}</p>
@@ -26,7 +32,7 @@ export function Library(&{ library, connection, route }: {
             actions.haptic('medium');
             actions.syncLibrary();
           }}>
-            {'Синхронизация'}
+            {'SYNC'}
           </button>
         </div>
       } else {
@@ -146,7 +152,7 @@ export function Library(&{ library, connection, route }: {
         min-height: var(--tap-min);
         padding: 8px 4px;
         border: none;
-        border-bottom: 1px solid oklch(98% 0 0 / 0.08);
+        border-bottom: 1px solid oklch(15% 0.02 260 / 0.08);
         background: transparent;
         cursor: pointer;
         color: var(--color-text);
@@ -157,7 +163,7 @@ export function Library(&{ library, connection, route }: {
       }
 
       .song-row:active {
-        background: oklch(98% 0 0 / 0.05);
+        background: oklch(15% 0.02 260 / 0.05);
       }
 
       .song-title {

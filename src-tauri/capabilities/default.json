@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "default permissions for SHUM",
+  "windows": ["*"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "haptics:default",
+    "shell:allow-open"
+  ]
+}

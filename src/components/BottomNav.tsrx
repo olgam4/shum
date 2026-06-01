@@ -1,6 +1,9 @@
 import type { Tracked } from 'ripple';
 import type { Route, PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
+import { IconHome } from './icons/IconHome.tsrx';
+import { IconLibrary } from './icons/IconLibrary.tsrx';
+import { IconSettings } from './icons/IconSettings.tsrx';
 
 export function BottomNav(&{ route, track }: {
   route: Tracked<Route>;
@@ -12,21 +15,21 @@ export function BottomNav(&{ route, track }: {
         actions.haptic('selection');
         route.value = 'home';
       }}>
-        <span class="nav-icon">{'🏠'}</span>
+        <IconHome active={route === 'home'} />
         <span class="nav-label">{'Home'}</span>
       </button>
       <button class="nav-tab" data-active={route === 'library'} onClick={() => {
         actions.haptic('selection');
         route.value = 'library';
       }}>
-        <span class="nav-icon">{'📚'}</span>
+        <IconLibrary active={route === 'library'} />
         <span class="nav-label">{'Library'}</span>
       </button>
       <button class="nav-tab" data-active={route === 'settings'} onClick={() => {
         actions.haptic('selection');
         route.value = 'settings';
       }}>
-        <span class="nav-icon">{'⚙'}</span>
+        <IconSettings active={route === 'settings'} />
         <span class="nav-label">{'Settings'}</span>
       </button>
     </nav>
@@ -65,9 +68,9 @@ export function BottomNav(&{ route, track }: {
         color: var(--color-primary);
       }
 
-      .nav-icon {
-        font-size: clamp(1rem, 3vw, 1.25rem);
-        line-height: 1;
+      .icon {
+        width: clamp(20px, 5vw, 26px);
+        height: clamp(20px, 5vw, 26px);
       }
 
       .nav-label {

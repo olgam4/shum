@@ -193,7 +193,7 @@ async fn connect_server(
     username: String,
     password: String,
 ) -> Result<ConnectionStatus, String> {
-    let password_hex = hex::encode(password.as_bytes());
+    let password_hex = format!("enc:{}", hex::encode(password.as_bytes()));
 
     let config = NavidromeConfig {
         server_url: server_url.clone(),
@@ -450,7 +450,7 @@ fn chrono_now() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::init();
+    log::info!("[SHUM] starting Tauri v2 mobile backend");
 
     let audio_manager = Arc::new(Mutex::new(AudioManager::new(NativeAudio::new())));
     let nav_state = Arc::new(Mutex::new(NavidromeState { client: None }));
@@ -485,7 +485,10 @@ pub fn run() {
             std::fs::create_dir_all(&app_dir).ok();
 
             // Restore saved connection
+            let config_exists = load_config(&app_dir).is_some();
+            log::info!("[SHUM] config file present: {}", config_exists);
             if let Some(config) = load_config(&app_dir) {
+                log::info!("[SHUM] auto-connecting to {}", config.server_url);
                 let client = NavidromeClient::new(config);
                 let handle = app.handle().clone();
                 let ns_clone = app.state::<Arc<Mutex<NavidromeState>>>().inner().clone();
@@ -493,6 +496,7 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     match client.ping().await {
                         Ok((server_type, server_version)) => {
+                            log::info!("[SHUM] auto-connect success: {} {}", server_type, server_version);
                             let mut ns = ns_clone.lock().unwrap();
                             ns.client = Some(client);
                             drop(ns);
@@ -517,6 +521,8 @@ pub fn run() {
                         }
                     }
                 });
+            } else {
+                log::info!("[SHUM] no saved config, skipping auto-connect");
             }
 
             // Open library DB

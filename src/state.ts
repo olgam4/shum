@@ -1,8 +1,7 @@
 import { track } from 'ripple';
 import type {
   AudioState, TrackMeta, PlaybackState, ConnectionStatus,
-  LibrarySong, LibraryAlbum, LibraryArtist, SearchResult,
-  LibrarySnapshot, Route,
+  SearchResult, LibrarySnapshot, Route,
 } from './types';
 
 export function initState() {
@@ -19,6 +18,7 @@ export function initState() {
   const _syncArtistCount = track(0);
   const _syncAlbumCount  = track(0);
   const _syncSongCount   = track(0);
+  const _syncing         = track(false);
 
   const _isPlaying   = track(() => _playback.value === 'playing');
   const _progressPct = track(() =>
@@ -27,28 +27,28 @@ export function initState() {
   const _volumePct   = track(() => Math.round(_volume.value * 100));
 
   function applyAudioState(s: AudioState): void {
-    if (s.currentTrack !== undefined) _track.set(s.currentTrack);
-    if (s.playbackState)              _playback.set(s.playbackState);
-    if (s.volume !== undefined)       _volume.set(s.volume);
-    if (s.positionSecs !== undefined) _progress.set(s.positionSecs);
-    if (s.currentTrack?.durationSecs) _duration.set(s.currentTrack.durationSecs);
+    if (s.currentTrack !== undefined) _track.value = s.currentTrack;
+    if (s.playbackState)              _playback.value = s.playbackState;
+    if (s.volume !== undefined)       _volume.value = s.volume;
+    if (s.positionSecs !== undefined) _progress.value = s.positionSecs;
+    if (s.currentTrack?.durationSecs) _duration.value = s.currentTrack.durationSecs;
   }
 
   function applyConnection(info: { connected: boolean; serverName?: string; serverVersion?: string; error?: string }): void {
-    if (info.connected) _connection.set('connected');
-    else if (info.error) _connection.set('disconnected');
-    else _connection.set('disconnected');
+    if (info.connected) _connection.value = 'connected';
+    else if (info.error) _connection.value = 'disconnected';
+    else _connection.value = 'disconnected';
   }
 
   function applyLibrarySnapshot(snapshot: LibrarySnapshot): void {
-    _syncArtistCount.set(snapshot.artistCount);
-    _syncAlbumCount.set(snapshot.albumCount);
-    _syncSongCount.set(snapshot.songCount);
-    _lastSync.set(snapshot.lastSync);
+    _syncArtistCount.value = snapshot.artistCount;
+    _syncAlbumCount.value = snapshot.albumCount;
+    _syncSongCount.value = snapshot.songCount;
+    _lastSync.value = snapshot.lastSync;
   }
 
   function applySearchResults(results: SearchResult): void {
-    _library.set(results);
+    _library.value = results;
   }
 
   return {
@@ -58,6 +58,7 @@ export function initState() {
     library: _library, lastSync: _lastSync,
     syncArtistCount: _syncArtistCount, syncAlbumCount: _syncAlbumCount,
     syncSongCount: _syncSongCount,
+    syncing: _syncing,
     isPlaying: _isPlaying, progressPercent: _progressPct,
     volumePercent: _volumePct,
     applyAudioState, applyConnection, applyLibrarySnapshot, applySearchResults,

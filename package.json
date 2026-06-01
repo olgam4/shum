@@ -19,16 +19,17 @@
     "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
-    "@ripple-ts/vite-plugin": "latest",
     "@ripple-ts/language-server": "latest",
-    "@tsrx/typescript-plugin": "latest",
+    "@ripple-ts/vite-plugin": "latest",
+    "@tsrx/eslint-parser": "latest",
     "@tsrx/eslint-plugin": "latest",
     "@tsrx/prettier-plugin": "latest",
-    "@tsrx/eslint-parser": "latest",
-    "typescript": "^5.9.3",
+    "@tsrx/typescript-plugin": "latest",
     "@typescript-eslint/parser": "^8.20.0",
-    "prettier": "^3.6.2",
+    "esbuild": "^0.28.0",
     "eslint": "^9.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
     "vite": "^8.0.0"
   }
 }

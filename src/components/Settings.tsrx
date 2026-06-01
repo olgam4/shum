@@ -1,20 +1,59 @@
-import { track, effect } from 'ripple';
+import { track } from 'ripple';
 import type { Tracked } from 'ripple';
 import type { ConnectionStatus } from '../types';
 import { actions } from '../actions';
 
-export function Settings(&{ connection, lastSync, syncSongCount, syncAlbumCount, syncArtistCount }: {
+export function Settings(props: {
   connection: Tracked<ConnectionStatus>;
   lastSync: Tracked<string | null>;
   syncSongCount: Tracked<number>;
   syncAlbumCount: Tracked<number>;
   syncArtistCount: Tracked<number>;
+  syncing: Tracked<boolean>;
 }) {
   const serverUrl  = track('');
   const username   = track('');
   const password   = track('');
-  const connecting = track(false);
+  const busy = track(false);
   const errorMsg   = track<string | null>(null);
+
+  const handleConnect = () => {
+    actions.haptic('medium');
+    busy.value = true;
+    errorMsg.value = null;
+    actions.connectServer(serverUrl.value, username.value, password.value)
+      .then((result: any) => {
+        if (result?.connected) {
+          actions.syncLibrary()
+            .then(() => {
+              busy.value = false;
+            })
+            .catch((e: any) => {
+              busy.value = false;
+              errorMsg.value = 'Sync failed: ' + String(e?.message ?? e);
+            });
+        } else {
+          busy.value = false;
+          errorMsg.value = result?.error ?? 'Connection failed';
+        }
+      })
+      .catch((e: any) => {
+        busy.value = false;
+        errorMsg.value = String(e?.message ?? e);
+      });
+  };
+
+  const handleSync = () => {
+    actions.haptic('medium');
+    props.syncing.value = true;
+    actions.syncLibrary()
+      .then(() => {
+        props.syncing.value = false;
+      })
+      .catch(() => {
+        props.syncing.value = false;
+      });
+  };
 
   return <>
     <div class="settings">
@@ -39,65 +78,54 @@ export function Settings(&{ connection, lastSync, syncSongCount, syncAlbumCount,
                  value={password.value} onInput={(e) => password.value = e.target.value} />
         </div>
 
-        if (connection !== 'connected') {
-          <button class="connect-btn" disabled={connecting} onClick={() => {
-            actions.haptic('medium');
-            connecting.value = true;
-            errorMsg.value = null;
-            actions.connectServer(serverUrl.value, username.value, password.value)
-              .then(() => { connecting.value = false; })
-              .catch((e) => { connecting.value = false; errorMsg.value = String(e); });
-          }}>
-            {connecting ? 'Connecting...' : 'СВЯЗАТЬСЯ'}
+        if (props.connection.value !== 'connected') {
+          <button class="connect-btn" disabled={busy.value} onClick={handleConnect}>
+            {busy.value ? 'CONNECTING...' : 'CONNECT'}
           </button>
         } else {
           <button class="disconnect-btn" onClick={() => {
             actions.haptic('heavy');
             actions.disconnect();
           }}>
-            {'Отключить'}
+            {'DISCONNECT'}
           </button>
         }
 
         <div class="connection-status">
-          switch (connection) {
+          switch (props.connection.value) {
             case 'connected':
               <span class="status-dot" data-state="connected" />
               <span class="status-text connected">{'Connected'}</span>
-            case 'connecting':
-              <span class="status-dot" data-state="connecting" />
-              <span class="status-text connecting">{'Connecting...'}</span>
+              break;
             case 'disconnected':
               <span class="status-dot" data-state="disconnected" />
               <span class="status-text disconnected">{'Disconnected'}</span>
+              break;
           }
-          if (errorMsg) {
-            <span class="status-error">{errorMsg}</span>
+          if (errorMsg.value) {
+            <span class="status-error">{errorMsg.value}</span>
           }
         </div>
       </div>
 
-      if (connection === 'connected') {
+      if (props.connection.value === 'connected') {
         <div class="section">
           <h3 class="section-title">{'Sync'}</h3>
-          <button class="sync-btn" onClick={() => {
-            actions.haptic('medium');
-            actions.syncLibrary().catch(() => {});
-          }}>
-            {'СИНХРОНИЗАЦИЯ'}
+          <button class="sync-btn" disabled={props.syncing.value} onClick={handleSync}>
+            {props.syncing.value ? 'SYNCING...' : 'SYNC'}
           </button>
           <div class="sync-stats">
             <div class="sync-row">
               <span class="sync-label">{'Songs'}</span>
-              <span class="sync-value">{syncSongCount}</span>
+              <span class="sync-value">{props.syncSongCount.value}</span>
             </div>
             <div class="sync-row">
               <span class="sync-label">{'Albums'}</span>
-              <span class="sync-value">{syncAlbumCount}</span>
+              <span class="sync-value">{props.syncAlbumCount.value}</span>
             </div>
             <div class="sync-row">
               <span class="sync-label">{'Artists'}</span>
-              <span class="sync-value">{syncArtistCount}</span>
+              <span class="sync-value">{props.syncArtistCount.value}</span>
             </div>
           </div>
         </div>
@@ -158,13 +186,8 @@ export function Settings(&{ connection, lastSync, syncSongCount, syncAlbumCount,
         -webkit-appearance: none;
       }
 
-      .input-field:focus {
-        border-color: var(--color-secondary);
-      }
-
-      .input-field::placeholder {
-        color: var(--color-text-muted);
-      }
+      .input-field:focus { border-color: var(--color-secondary); }
+      .input-field::placeholder { color: var(--color-text-muted); }
 
       .connect-btn, .disconnect-btn, .sync-btn {
         width: 100%;
@@ -185,97 +208,41 @@ export function Settings(&{ connection, lastSync, syncSongCount, syncAlbumCount,
       }
 
       .connect-btn:active, .disconnect-btn:active, .sync-btn:active {
-        transform: translate(2px, 2px);
-        box-shadow: none;
+        transform: translate(2px, 2px); box-shadow: none;
       }
-
-      .connect-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .disconnect-btn {
-        border-color: var(--color-tertiary);
-        color: var(--color-tertiary);
-      }
+      .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .disconnect-btn { border-color: var(--color-tertiary); color: var(--color-tertiary); }
 
       .connection-status {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 12px;
-        flex-wrap: wrap;
+        display: flex; align-items: center; gap: 8px;
+        margin-top: 12px; flex-wrap: wrap;
       }
 
-      .status-dot {
-        width: 8px; height: 8px;
-        flex-shrink: 0;
-      }
-
+      .status-dot { width: 8px; height: 8px; flex-shrink: 0; }
       .status-dot[data-state='connected'] {
         background: var(--color-secondary);
         box-shadow: 0 0 6px oklch(52% 0.32 262 / 0.5);
       }
+      .status-dot[data-state='disconnected'] { background: var(--color-text-muted); }
 
-      .status-dot[data-state='connecting'] {
-        background: var(--color-primary);
-        animation: status-blink 0.6s step-end infinite;
-      }
-
-      .status-dot[data-state='disconnected'] {
-        background: var(--color-text-muted);
-      }
-
-      @keyframes status-blink {
-        50% { opacity: 0; }
-      }
-
-      .status-text {
-        font-size: clamp(0.6rem, 1.4vw, 0.7rem);
-        font-weight: 700;
-        letter-spacing: 0.06em;
-      }
-
+      .status-text { font-size: clamp(0.6rem, 1.4vw, 0.7rem); font-weight: 700; letter-spacing: 0.06em; }
       .status-text.connected { color: var(--color-secondary); }
-      .status-text.connecting { color: var(--color-primary); }
       .status-text.disconnected { color: var(--color-text-muted); }
 
       .status-error {
-        width: 100%;
-        font-size: clamp(0.55rem, 1.2vw, 0.65rem);
-        color: var(--color-tertiary);
-        margin-top: 4px;
-        word-break: break-all;
+        width: 100%; font-size: clamp(0.55rem, 1.2vw, 0.65rem);
+        color: var(--color-tertiary); margin-top: 4px; word-break: break-all;
       }
 
       .sync-stats {
-        margin-top: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+        margin-top: 12px; display: flex; flex-direction: column; gap: 6px;
       }
-
-      .sync-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: clamp(0.65rem, 1.5vw, 0.75rem);
-      }
-
+      .sync-row { display: flex; justify-content: space-between; font-size: clamp(0.65rem, 1.5vw, 0.75rem); }
       .sync-label { color: var(--color-text-muted); }
       .sync-value { color: var(--color-secondary); font-weight: 800; }
 
-      .app-version {
-        font-size: clamp(0.65rem, 1.5vw, 0.75rem);
-        font-weight: 800;
-        color: var(--color-primary);
-        margin: 0;
-      }
-
-      .app-credits {
-        font-size: clamp(0.55rem, 1.2vw, 0.65rem);
-        color: var(--color-text-muted);
-        margin: 2px 0 0 0;
-      }
+      .app-version { font-size: clamp(0.65rem, 1.5vw, 0.75rem); font-weight: 800; color: var(--color-primary); margin: 0; }
+      .app-credits { font-size: clamp(0.55rem, 1.2vw, 0.65rem); color: var(--color-text-muted); margin: 2px 0 0 0; }
     </style>
   </>;
 }

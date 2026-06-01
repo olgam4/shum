@@ -4,7 +4,7 @@ import type { TrackMeta, ConnectionInfo, LibrarySnapshot, SearchResult, CachePro
 export const actions = {
   requestPlay(track: TrackMeta | null) {
     if (track) return invoke('resume');
-    return invoke('playTrack', {
+    return invoke('play_track', {
       id: 'default', title: 'Test Tone', artist: 'SHUM',
       album: 'System', durationSecs: 180, coverArtUrl: null,
       streamUrl: '', localPath: null,
@@ -12,7 +12,7 @@ export const actions = {
   },
 
   requestPlaySong(song: { id: string; title: string; artist: string; album: string; duration: number; coverArt: string }, coverArtUrl: string) {
-    return invoke('playTrack', {
+    return invoke('play_track', {
       id: song.id, title: song.title, artist: song.artist,
       album: song.album, durationSecs: song.duration,
       coverArtUrl, streamUrl: '', localPath: null,
@@ -20,7 +20,7 @@ export const actions = {
   },
 
   requestPlayUrl(song: { id: string; title: string; artist: string; album: string; duration: number; coverArt: string }, streamUrl: string, coverArtUrl: string) {
-    return invoke('playTrack', {
+    return invoke('play_track', {
       id: song.id, title: song.title, artist: song.artist,
       album: song.album, durationSecs: song.duration,
       coverArtUrl, streamUrl, localPath: null,
@@ -28,7 +28,7 @@ export const actions = {
   },
 
   requestPlayLocal(song: { id: string; title: string; artist: string; album: string; duration: number; coverArt: string }, localPath: string, coverArtUrl: string) {
-    return invoke('playTrack', {
+    return invoke('play_track', {
       id: song.id, title: song.title, artist: song.artist,
       album: song.album, durationSecs: song.duration,
       coverArtUrl, streamUrl: '', localPath,
@@ -38,10 +38,10 @@ export const actions = {
   requestPause()     { return invoke('pause'); },
   requestStop()      { return invoke('stop'); },
   requestSeek(pos: number)  { return invoke('seek', { positionSecs: pos }); },
-  requestSetVolume(v: number) { return invoke('setVolume', { volume: Math.max(0, Math.min(1, v)) }); },
+  requestSetVolume(v: number) { return invoke('set_volume', { volume: Math.max(0, Math.min(1, v)) }); },
 
   async connectServer(url: string, username: string, password: string): Promise<ConnectionInfo> {
-    return invoke('connectServer', { serverUrl: url, username, password });
+    return invoke('connect_server', { serverUrl: url, username, password });
   },
 
   disconnect(): Promise<ConnectionInfo> {

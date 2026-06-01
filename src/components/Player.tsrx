@@ -2,6 +2,7 @@ import type { Tracked } from 'ripple';
 import type { PlaybackState, TrackMeta } from '../types';
 import { actions } from '../actions';
 import { formatTime } from '../state';
+import { IconChevronUp } from './icons/IconChevronUp.tsrx';
 
 export function Player(&{ track, playbackState, progress, duration, progressPercent, volume, volumePercent, playerOpen }: {
   track: Tracked<TrackMeta | null>;
@@ -23,7 +24,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
           actions.haptic('light');
           playerOpen.value = false;
         }}>
-          {'▼'}
+          <IconChevronUp />
         </button>
 
         <div class="player-content">
@@ -109,7 +110,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
         position: fixed;
         inset: 0;
         z-index: 200;
-        background: oklch(12% 0.02 260 / 0.92);
+        background: oklch(97% 0.01 90 / 0.92);
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -327,7 +328,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
       .status-bar {
         width: 100%; display: flex; align-items: center; justify-content: space-between;
         padding-top: 10px;
-        border-top: 2px solid oklch(98% 0 0 / 0.1);
+        border-top: 2px solid oklch(15% 0.02 260 / 0.1);
       }
 
       .status-label {
@@ -347,7 +348,7 @@ export function Player(&{ track, playbackState, progress, duration, progressPerc
 
       .status-dot {
         width: 10px; height: 10px;
-        border: 2px solid oklch(98% 0 0 / 0.3);
+        border: 2px solid oklch(15% 0.02 260 / 0.3);
         background: transparent;
       }
 

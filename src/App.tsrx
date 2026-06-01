@@ -1,7 +1,8 @@
 import { listen } from '@tauri-apps/api/event';
 import { effect } from 'ripple';
 import { initState } from './state';
-import type { AudioState, ConnectionInfo, LibrarySnapshot, SearchResult, CacheProgress } from './types';
+import { actions } from './actions';
+import type { AudioState, ConnectionInfo, LibrarySnapshot, SearchResult } from './types';
 import { Header } from './components/Header.tsrx';
 import { BottomNav } from './components/BottomNav.tsrx';
 import { Home } from './components/Home.tsrx';
@@ -14,19 +15,30 @@ export function App() {
   const s = initState();
   const unlistenFns: (() => void)[] = [];
 
-  listen<AudioState>('shum:state-changed', (e) => s.applyAudioState(e.payload))
-    .then((fn) => unlistenFns.push(fn));
-  listen<AudioState>('shum:position-tick', (e) => {
-    s.progress.value = e.payload.positionSecs;
-  }).then((fn) => unlistenFns.push(fn));
-  listen<ConnectionInfo>('shum:connection-changed', (e) => s.applyConnection(e.payload))
-    .then((fn) => unlistenFns.push(fn));
-  listen<LibrarySnapshot>('shum:library-synced', (e) => s.applyLibrarySnapshot(e.payload))
-    .then((fn) => unlistenFns.push(fn));
-  listen<SearchResult>('shum:search-results', (e) => s.applySearchResults(e.payload))
-    .then((fn) => unlistenFns.push(fn));
+  effect(() => {
+    listen<AudioState>('shum:state-changed', (e) => s.applyAudioState(e.payload))
+      .then((fn) => unlistenFns.push(fn)).catch(() => {});
+    listen<AudioState>('shum:position-tick', (e) => {
+      s.progress.value = e.payload.positionSecs;
+    }).then((fn) => unlistenFns.push(fn)).catch(() => {});
+    listen<ConnectionInfo>('shum:connection-changed', (e) => s.applyConnection(e.payload))
+      .then((fn) => unlistenFns.push(fn)).catch(() => {});
+    listen<LibrarySnapshot>('shum:library-synced', (e) => {
+      s.applyLibrarySnapshot(e.payload);
+      if (e.payload.songCount > 0) {
+        s.syncing.value = true;
+        actions.searchLibrary('').then((r: any) => {
+          s.applySearchResults(r);
+          s.syncing.value = false;
+        }).catch(() => { s.syncing.value = false; });
+      }
+    })
+      .then((fn) => unlistenFns.push(fn)).catch(() => {});
+    listen<SearchResult>('shum:search-results', (e) => s.applySearchResults(e.payload))
+      .then((fn) => unlistenFns.push(fn)).catch(() => {});
 
-  effect(() => () => unlistenFns.forEach((fn) => fn()));
+    return () => unlistenFns.forEach((fn) => fn());
+  });
 
   return <>
     <div class="app-root">
@@ -37,14 +49,22 @@ export function App() {
             <Home track={s.track} playbackState={s.playbackState}
                   connection={s.connection} route={s.route}
                   syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
-                  syncArtistCount={s.syncArtistCount} />
+                  syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
+            break;
           case 'library':
             <Library library={s.library} connection={s.connection}
-                     route={s.route} />
+                     route={s.route} syncing={s.syncing} />
+            break;
           case 'settings':
             <Settings connection={s.connection} lastSync={s.lastSync}
                       syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
-                      syncArtistCount={s.syncArtistCount} />
+                      syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
+            break;
+          default:
+            <Home track={s.track} playbackState={s.playbackState}
+                  connection={s.connection} route={s.route}
+                  syncSongCount={s.syncSongCount} syncAlbumCount={s.syncAlbumCount}
+                  syncArtistCount={s.syncArtistCount} syncing={s.syncing} />
         }
       </div>
       if (s.track.value) {
@@ -69,17 +89,18 @@ export function App() {
         --pr-yellow: oklch(89% 0.21 100);
         --pr-gentian: oklch(52% 0.32 262);
         --pr-ruby: oklch(53% 0.28 12);
-        --pr-ink: oklch(12% 0.02 260);
-        --pr-ink-raised: oklch(16% 0.02 260);
-        --pr-white: oklch(98% 0 0);
+        --pr-paper: oklch(97% 0.01 90);
+        --pr-paper-raised: oklch(93% 0.02 90);
+        --pr-ink: oklch(15% 0.02 260);
+        --pr-white: oklch(100% 0 0);
 
         --color-primary: var(--pr-yellow);
         --color-secondary: var(--pr-gentian);
         --color-tertiary: var(--pr-ruby);
-        --color-surface: var(--pr-ink);
-        --color-surface-elevated: var(--pr-ink-raised);
-        --color-text: var(--pr-white);
-        --color-text-muted: oklch(98% 0 0 / 0.45);
+        --color-surface: var(--pr-paper);
+        --color-surface-elevated: var(--pr-paper-raised);
+        --color-text: var(--pr-ink);
+        --color-text-muted: oklch(15% 0.02 260 / 0.55);
         --border-width: 3px;
         --shadow-offset: 4px;
         --font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
@@ -87,11 +108,10 @@ export function App() {
         --bottom-nav-height: 56px;
         --widget-height: 56px;
         --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-top: env(safe-area-inset-top, 0px);
       }
 
-      :global(body),
-      :global(html),
-      :global(#root) {
+      :global(body), :global(html), :global(#root) {
         margin: 0; padding: 0;
         height: 100dvh; width: 100%;
         overflow: hidden;
@@ -108,6 +128,7 @@ export function App() {
         height: 100dvh; width: 100%;
         display: flex; flex-direction: column;
         position: relative;
+        padding-top: var(--safe-top);
       }
 
       .page-content {
