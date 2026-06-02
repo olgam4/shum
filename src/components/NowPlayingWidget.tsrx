@@ -1,15 +1,14 @@
-import { actions } from '../actions';
-import { trackCtx, playbackCtx, playerOpenCtx, routeCtx, ctx } from '../context';
+import { nowPlaying, requestPlay, requestPause, haptic } from '../stores/now-playing';
+import { router, navigateToArtist } from '../stores/router';
 
 export function NowPlayingWidget() {
-  const tk = trackCtx.get();
-  const pb = playbackCtx.get();
-  const po = playerOpenCtx.get();
-  const rt = routeCtx.get();
+  const tk = nowPlaying.track;
+  const pb = nowPlaying.playback;
+  const po = nowPlaying.playerOpen;
 
   return <>
     <div class="widget" onClick={() => {
-      actions.haptic('light');
+      haptic('light');
       po.open.value = true;
     }}>
       <div class="widget-progress-bar">
@@ -17,32 +16,32 @@ export function NowPlayingWidget() {
       </div>
       <div class="widget-inner">
         <div class="widget-info">
-          <span class="widget-title">{tk.current.value?.title ?? '—'}</span>
+          <span class="widget-title">{tk.current.value?.title ?? '\u2014'}</span>
           <span class="widget-artist">
-            <button class="widget-artist-btn" onClick={(e) => {
+            <button class="widget-artist-btn" onClick={(e: Event) => {
               e.stopPropagation();
               if (tk.current.value?.artistId) {
-                actions.haptic('light');
-                ctx.selectedArtist.id.value = tk.current.value.artistId;
-                ctx.selectedArtist.name.value = tk.current.value.artist;
+                haptic('light');
+                router.selectedArtist.id.value = tk.current.value.artistId;
+                router.selectedArtist.name.value = tk.current.value.artist;
                 po.open.value = false;
-                rt.current.value = 'artist';
+                navigateToArtist(tk.current.value.artistId, tk.current.value.artist);
               }
             }}>
               {tk.current.value?.artist ?? ''}
             </button>
             if (tk.current.value?.suffix) {
-              <span class="widget-format">{` · ${tk.current.value.suffix.toUpperCase()}`}</span>
+              <span class="widget-format">{` \u00B7 ${tk.current.value.suffix.toUpperCase()}`}</span>
             }
           </span>
         </div>
-        <button class="widget-play-btn" onClick={(e) => {
+        <button class="widget-play-btn" onClick={(e: Event) => {
           e.stopPropagation();
-          actions.haptic('light');
-          if (pb.state.value === 'playing') actions.requestPause();
-          else actions.requestPlay(tk.current.value);
+          haptic('light');
+          if (pb.state.value === 'playing') requestPause();
+          else requestPlay(tk.current.value);
         }}>
-          {pb.state.value === 'playing' ? '⏸︎' : '▶'}
+          {pb.state.value === 'playing' ? '\u23F8' : '\u25B6'}
         </button>
       </div>
     </div>
@@ -53,14 +52,15 @@ export function NowPlayingWidget() {
         flex-shrink: 0;
         height: var(--widget-height);
         background: var(--color-surface-elevated);
-        border-top: var(--border-width) solid var(--color-primary);
+        border-top: var(--border-width) solid var(--color-text);
+        box-shadow: 0 -2px 0 var(--color-text);
         cursor: pointer;
         z-index: 99;
         -webkit-tap-highlight-color: transparent;
       }
 
       .widget:active {
-        background: oklch(88% 0.02 90 / 0.95);
+        background: var(--color-surface-variant);
       }
 
       .widget-progress-bar {
@@ -92,8 +92,9 @@ export function NowPlayingWidget() {
       }
 
       .widget-title {
-        font-size: clamp(0.7rem, 1.8vw, 0.8rem);
-        font-weight: 800;
+        font-family: var(--font-family);
+        font-size: var(--fs-body-bold);
+        font-weight: 700;
         color: var(--color-text);
         white-space: nowrap;
         overflow: hidden;
@@ -101,7 +102,9 @@ export function NowPlayingWidget() {
       }
 
       .widget-artist {
-        font-size: clamp(0.6rem, 1.4vw, 0.7rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
         color: var(--color-text-muted);
         white-space: nowrap;
         overflow: hidden;
@@ -111,9 +114,9 @@ export function NowPlayingWidget() {
       }
 
       .widget-artist-btn {
-        font-size: inherit;
-        color: inherit;
         font-family: var(--font-family);
+        font-size: inherit;
+        color: var(--color-secondary);
         background: transparent;
         border: none;
         padding: 0;
@@ -123,7 +126,7 @@ export function NowPlayingWidget() {
         overflow: hidden;
         text-overflow: ellipsis;
         text-decoration: underline;
-        text-decoration-color: oklch(15% 0.02 260 / 0.2);
+        text-decoration-color: var(--color-secondary-container);
         text-underline-offset: 2px;
         -webkit-tap-highlight-color: transparent;
         outline: none;
@@ -144,8 +147,9 @@ export function NowPlayingWidget() {
         flex-shrink: 0;
         width: var(--tap-min);
         height: var(--tap-min);
-        border: var(--border-width) solid var(--color-secondary);
-        background: var(--color-surface);
+        border: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
+        background: var(--color-surface-lowest);
         color: var(--color-text);
         font-size: clamp(0.875rem, 2.5vw, 1rem);
         cursor: pointer;
@@ -153,13 +157,13 @@ export function NowPlayingWidget() {
         align-items: center;
         justify-content: center;
         padding: 0;
-        box-shadow: 2px 2px 0px var(--color-primary);
         -webkit-tap-highlight-color: transparent;
         outline: none;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
       }
 
       .widget-play-btn:active {
-        transform: translate(1px, 1px);
+        transform: translate(var(--shadow-offset), var(--shadow-offset));
         box-shadow: none;
       }
     </style>

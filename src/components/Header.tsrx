@@ -1,53 +1,62 @@
 export function Header() {
   return <>
-    <div class="header">
-      <h1 class="wordmark" aria-label="SHUM">
-        <span class="char char-a">{'Ш'}</span>
-        <span class="char char-b">{'У'}</span>
-        <span class="char char-c">{'М'}</span>
-      </h1>
-    </div>
+    <header class="header">
+      <button class="header-btn">{'☰'}</button>
+      <h1 class="wordmark">{'ШУМ'}</h1>
+      <button class="header-btn">{'⚙'}</button>
+    </header>
 
     <style>
       .header {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        padding: clamp(8px, 2vh, 16px) clamp(8px, 2vw, 20px);
+        justify-content: space-between;
         flex-shrink: 0;
+        width: 100%;
+        padding: var(--unit) var(--margin);
+        border-bottom: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
+        background: var(--color-surface);
+        z-index: 40;
+      }
+
+      .header-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--tap-min);
+        height: var(--tap-min);
+        border: var(--border-width) solid transparent;
+        background: transparent;
+        color: var(--color-text);
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-weight: 800;
+        cursor: pointer;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+        outline: none;
+        transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+      }
+
+      .header-btn:hover {
+        border-color: var(--color-text);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+      }
+
+      .header-btn:active {
+        transform: translate(2px, 2px);
       }
 
       .wordmark {
-        display: flex;
-        gap: clamp(3px, 0.8vw, 10px);
-        font-size: clamp(2rem, 8vw, 5rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-headline-lg);
         font-weight: 900;
         letter-spacing: -0.04em;
         line-height: 1;
+        color: var(--color-text);
         margin: 0;
-      }
-
-      .char {
-        display: inline-block;
-        border: var(--border-width) solid currentColor;
-        padding: clamp(3px, 0.8vw, 10px) clamp(6px, 1.5vw, 16px);
-        background: var(--color-surface);
-        transition: transform 0.1s ease;
-      }
-
-      .char-a {
-        color: var(--color-tertiary);
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
-      }
-
-      .char-b {
-        color: var(--color-secondary);
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
-      }
-
-      .char-c {
-        color: var(--color-secondary);
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-tertiary);
+        text-transform: uppercase;
       }
     </style>
   </>;

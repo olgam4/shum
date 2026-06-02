@@ -25,7 +25,9 @@
     "icon": ["icons/icon.png"],
     "iOS": {
       "developmentTeam": "JGD5CLUNDD",
-      "infoPlist": "./Info.ios.plist"
+      "infoPlist": "./Info.ios.plist",
+      "minimumSystemVersion": "16.0",
+      "frameworks": ["AVFoundation", "MediaPlayer", "CoreHaptics"]
     }
   }
 }

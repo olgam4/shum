@@ -11,9 +11,14 @@ export interface TrackMeta {
   suffix: string;
 }
 
-export type PlaybackState = 'playing' | 'paused' | 'stopped' | 'buffering' | 'error';
+export type PlaybackState =
+  | "playing"
+  | "paused"
+  | "stopped"
+  | "buffering"
+  | "error";
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
 export interface ConnectionInfo {
   connected: boolean;
@@ -80,13 +85,18 @@ export interface StartupState {
 
 export interface CacheProgress {
   songId: string;
-  status: 'downloading' | 'complete' | 'error';
+  status: "downloading" | "complete" | "error";
   localPath?: string;
 }
 
-export type Route = 'home' | 'library' | 'settings' | 'artist' | 'album';
+export type Route = "home" | "library" | "settings" | "artist" | "album";
 
-export type NativeAudioStatus = 'idle' | 'loading' | 'playing' | 'ended' | 'error';
+export type NativeAudioStatus =
+  | "idle"
+  | "loading"
+  | "playing"
+  | "ended"
+  | "error";
 
 export interface NativeAudioState {
   status: NativeAudioStatus;

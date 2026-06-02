@@ -1,26 +1,32 @@
 import type { PlaybackState, TrackMeta } from '../types';
-import { actions } from '../actions';
-import { formatTime } from '../state';
-import { trackCtx, playbackCtx, playerOpenCtx, routeCtx, ctx, libraryCtx } from '../context';
-import { computed } from '../state';
+import { nowPlaying, requestPlay, requestPause, requestStop, haptic } from '../stores/now-playing';
+import { router, navigateToArtist, navigateToAlbum } from '../stores/router';
+import { formatTime, computed } from '../state';
+import { DataCell } from './DataCell.tsrx';
+import { IconButton } from './IconButton.tsrx';
+import { Badge } from './Badge.tsrx';
 import { IconChevronUp } from './icons/IconChevronUp.tsrx';
 
 export function Player() {
-  const tk = trackCtx.get();
-  const pb = playbackCtx.get();
-  const po = playerOpenCtx.get();
-  const rt = routeCtx.get();
+  const tk = nowPlaying.track;
+  const pb = nowPlaying.playback;
+  const po = nowPlaying.playerOpen;
+  const pc = nowPlaying.playerClosing;
+  const rt = router.state;
+
+  const closePlayer = () => {
+    haptic('light');
+    pc.closing.value = true;
+    setTimeout(() => {
+      pc.closing.value = false;
+      po.open.value = false;
+    }, 250);
+  };
 
   return <>
-    <div class="player-overlay" onClick={() => {
-      actions.haptic('light');
-      po.open.value = false;
-    }}>
-      <div class="player-sheet" onClick={(e) => e.stopPropagation()}>
-        <button class="close-btn" onClick={() => {
-          actions.haptic('light');
-          po.open.value = false;
-        }}>
+    <div class={`player-overlay${pc.closing.value ? ' closing' : ''}`} onClick={closePlayer}>
+      <div class={`player-sheet${pc.closing.value ? ' closing' : ''}`} onClick={(e: Event) => e.stopPropagation()}>
+        <button class="close-btn" onClick={closePlayer}>
           <IconChevronUp />
         </button>
 
@@ -31,86 +37,79 @@ export function Player() {
             } else {
               <div class="album-art-placeholder">
                 <span class="placeholder-glyph" data-state={pb.state.value}>
-                  {pb.state.value === 'playing' ? '⋆' : '□'}
+                  {pb.state.value === 'playing' ? '\u22C6' : '\u25A1'}
                 </span>
               </div>
             }
+            <div class="album-art-badge">
+              <Badge variant="accent">{'LOSSLESS AUDIO'}</Badge>
+            </div>
           </div>
 
           <div class="track-info">
-            <h2 class="track-title">{tk.current.value?.title ?? '—'}</h2>
+            <h2 class="track-title">{tk.current.value?.title ?? '\u2014'}</h2>
             <button class="track-artist-btn" onClick={() => {
               if (tk.current.value?.artistId) {
-                actions.haptic('light');
-                ctx.selectedArtist.id.value = tk.current.value.artistId;
-                ctx.selectedArtist.name.value = tk.current.value.artist;
-                po.open.value = false;
-                rt.current.value = 'artist';
+                haptic('light');
+                pc.closing.value = true;
+                navigateToArtist(tk.current.value.artistId, tk.current.value.artist);
+                setTimeout(() => {
+                  pc.closing.value = false;
+                  po.open.value = false;
+                }, 250);
               }
             }}>{tk.current.value?.artist ?? 'Unknown Artist'}</button>
             <button class="track-album-btn" onClick={() => {
               if (tk.current.value?.albumId) {
-                actions.haptic('light');
-                ctx.selectedAlbum.id.value = tk.current.value.albumId;
-                ctx.selectedAlbum.name.value = tk.current.value.album;
-                ctx.selectedAlbum.artistId.value = tk.current.value?.artistId ?? '';
-                ctx.selectedAlbum.artistName.value = tk.current.value?.artist ?? '';
-                po.open.value = false;
-                rt.current.value = 'album';
+                haptic('light');
+                pc.closing.value = true;
+                navigateToAlbum(tk.current.value.albumId, tk.current.value.album, tk.current.value?.artistId ?? '', tk.current.value?.artist ?? '');
+                setTimeout(() => {
+                  pc.closing.value = false;
+                  po.open.value = false;
+                }, 250);
               }
             }}>{tk.current.value?.album ?? ''}</button>
             if (tk.current.value?.suffix) {
-              <p class="track-format">{`${tk.current.value.suffix.toUpperCase()} · ${tk.current.value.contentType}`}</p>
+              <p class="track-format">{`${tk.current.value.suffix.toUpperCase()} \u00B7 ${tk.current.value.contentType}`}</p>
             }
+          </div>
+
+          <div class="bento-grid">
+            <DataCell label="Sample Rate" value="48 kHz" />
+            <DataCell label="Bit Depth" value="16-bit" />
+            <DataCell label="Format" value={tk.current.value?.suffix?.toUpperCase() ?? '\u2014'} />
+            <div class="bento-full">
+              <DataCell label="Source" value={tk.current.value?.contentType ?? '\u2014'} />
+            </div>
           </div>
 
           <div class="progress-section">
             <div class="progress-bar-track">
-              <div class="progress-bar-fill" style={{ '--pb': computed.progressPct.value }} />
+              <div class="progress-bar-fill" style={{ '--pb': computed.progressPct.value }}>
+                <div class="progress-bar-knob" />
+              </div>
             </div>
             <div class="progress-times">
               <span class="time-elapsed">{formatTime(pb.progress.value)}</span>
-              <span class="time-total">{formatTime(pb.duration.value)}</span>
+              <span class="time-total">{`-${formatTime(pb.duration.value - pb.progress.value)}`}</span>
             </div>
           </div>
 
           <div class="transport-controls">
-            <button class="ctrl-btn ctrl-btn--side" disabled>
-              <span class="ctrl-glyph">{'◁◁'}</span>
-            </button>
-
+            <IconButton icon="\u25C1\u25C1" size="lg" onClick={() => {}} />
             if (pb.state.value === 'playing') {
-              <button class="ctrl-btn ctrl-btn--primary" onClick={() => {
-                actions.haptic('light');
-                actions.requestPause();
-              }}>
-                <span class="ctrl-glyph">{'⏸︎'}</span>
-              </button>
+              <IconButton icon="\u23F8" variant="tertiary" size="xl" onClick={() => {
+                haptic('light');
+                requestPause();
+              }} />
             } else {
-              <button class="ctrl-btn ctrl-btn--primary" onClick={() => {
-                actions.haptic('light');
-                actions.requestPlay(tk.current.value);
-              }}>
-                <span class="ctrl-glyph">{'▶'}</span>
-              </button>
+              <IconButton icon="\u25B6" variant="primary" size="xl" onClick={() => {
+                haptic('light');
+                requestPlay(tk.current.value);
+              }} />
             }
-
-            <button class="ctrl-btn ctrl-btn--side" disabled>
-              <span class="ctrl-glyph">{'▷▷'}</span>
-            </button>
-          </div>
-
-          <div class="volume-section">
-            <span class="volume-label">{'VOL '}{computed.volumePct.value}{'%'}</span>
-            <div class="volume-bar-track">
-              <div class="volume-bar-fill" style={{ '--vol': computed.volumePct.value }} />
-            </div>
-            <button class="stop-btn" onClick={() => {
-              actions.haptic('medium');
-              actions.requestStop();
-            }}>
-              <span class="stop-glyph">{'⏹'}</span>
-            </button>
+            <IconButton icon="\u25B7\u25B7" size="lg" onClick={() => {}} />
           </div>
 
           <div class="status-bar">
@@ -118,6 +117,12 @@ export function Player() {
               {pb.state.value.toUpperCase()}
             </span>
             <span class="status-dot" data-state={pb.state.value} />
+            <button class="stop-btn" onClick={() => {
+              haptic('medium');
+              requestStop();
+            }}>
+              <span class="stop-glyph">{'\u23F9'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -128,7 +133,7 @@ export function Player() {
         position: fixed;
         inset: 0;
         z-index: 200;
-        background: oklch(97% 0.01 90 / 0.92);
+        background: var(--color-surface);
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -141,9 +146,19 @@ export function Player() {
         to { opacity: 1; }
       }
 
+      .player-overlay.closing {
+        animation: overlay-out 0.25s ease forwards;
+      }
+
+      @keyframes overlay-out {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
       .player-sheet {
         background: var(--color-surface-elevated);
-        border-top: var(--border-width) solid var(--color-primary);
+        border-top: var(--border-width) solid var(--color-text);
+        box-shadow: 0 -4px 0 var(--color-text);
         max-height: 100%;
         display: flex;
         flex-direction: column;
@@ -156,6 +171,15 @@ export function Player() {
         to { transform: translateY(0); }
       }
 
+      .player-sheet.closing {
+        animation: sheet-down 0.25s ease forwards;
+      }
+
+      @keyframes sheet-down {
+        from { transform: translateY(0); }
+        to { transform: translateY(100%); }
+      }
+
       .close-btn {
         display: block;
         flex-shrink: 0;
@@ -164,7 +188,7 @@ export function Player() {
         background: none;
         border: none;
         color: var(--color-text-muted);
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-size: clamp(0.875rem, 2.5vw, 1rem);
         cursor: pointer;
         min-height: var(--tap-min);
         min-width: var(--tap-min);
@@ -180,16 +204,19 @@ export function Player() {
         align-items: stretch;
         gap: clamp(6px, 1.2vh, 12px);
         padding: 0 clamp(16px, 4vw, 32px) clamp(16px, 4vw, 32px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .album-art-container {
-        width: clamp(120px, 45vw, 260px);
-        height: clamp(120px, 45vw, 260px);
+        width: clamp(160px, 50vw, 280px);
+        height: clamp(160px, 50vw, 280px);
         flex-shrink: 0;
         align-self: center;
-        border: var(--border-width) solid var(--color-secondary);
+        border: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset-lg) var(--shadow-offset-lg) 0 var(--color-text);
         overflow: hidden;
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
+        position: relative;
       }
 
       .album-art { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -197,18 +224,17 @@ export function Player() {
       .album-art-placeholder {
         width: 100%; height: 100%;
         display: flex; align-items: center; justify-content: center;
-        background: var(--color-surface);
+        background: var(--color-primary-container);
       }
 
       .placeholder-glyph {
         font-size: clamp(3rem, 8vw, 5rem);
-        color: var(--color-secondary);
+        color: var(--color-on-primary-container);
         opacity: 0.5;
       }
 
       .placeholder-glyph[data-state='playing'] {
         opacity: 1;
-        color: var(--color-secondary);
         animation: glyph-pulse 1.4s ease-in-out infinite;
       }
 
@@ -222,69 +248,103 @@ export function Player() {
         50% { opacity: 1; transform: scale(1.12); }
       }
 
+      .album-art-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+      }
+
       .track-info { text-align: center; }
 
       .track-title {
-        font-size: clamp(1.25rem, 4vw, 1.75rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-headline-lg);
         font-weight: 800;
-        color: var(--color-secondary);
+        letter-spacing: -0.02em;
+        color: var(--color-text);
         margin: 0;
+        line-height: var(--lh-headline);
       }
 
       .track-artist-btn {
         display: block;
         width: 100%;
-        font-size: clamp(0.875rem, 2.5vw, 1.125rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-bold);
         color: var(--color-secondary);
         font-weight: 700;
-        margin: 4px 0 0 0;
+        margin: 6px 0 0 0;
         padding: 0;
         border: none;
         background: transparent;
         cursor: pointer;
-        font-family: var(--font-family);
         text-align: center;
         -webkit-tap-highlight-color: transparent;
         outline: none;
         text-decoration: underline;
-        text-decoration-color: oklch(52% 0.32 262 / 0.3);
+        text-decoration-color: var(--color-secondary-container);
         text-underline-offset: 3px;
       }
 
       .track-artist-btn:active {
         opacity: 0.6;
+        transform: scale(0.97);
       }
 
       .track-album-btn {
         display: block;
         width: 100%;
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-reg);
         color: var(--color-text-muted);
-        margin: 2px 0 0 0;
+        font-weight: 400;
+        margin: 3px 0 0 0;
         padding: 0;
         border: none;
         background: transparent;
         cursor: pointer;
-        font-family: var(--font-family);
         text-align: center;
         -webkit-tap-highlight-color: transparent;
         outline: none;
         text-decoration: underline;
-        text-decoration-color: oklch(15% 0.02 260 / 0.2);
+        text-decoration-color: var(--color-outline);
         text-underline-offset: 3px;
       }
 
       .track-album-btn:active {
         opacity: 0.6;
+        transform: scale(0.97);
+      }
+
+      .track-format {
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted);
+        margin: 4px 0 0 0;
+        opacity: 0.6;
+      }
+
+      .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--unit);
+        margin-top: 6px;
+      }
+
+      .bento-full {
+        grid-column: 1 / -1;
       }
 
       .progress-section { display: flex; flex-direction: column; gap: 6px; }
 
       .progress-bar-track {
-        width: 100%; height: 10px;
-        border: var(--border-width) solid var(--color-secondary);
+        width: 100%; height: 20px;
+        border: var(--border-width) solid var(--color-text);
         background: var(--color-surface);
         overflow: hidden;
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
       }
 
       .progress-bar-fill {
@@ -292,107 +352,80 @@ export function Player() {
         width: calc(var(--pb) * 1%);
         background: var(--color-primary);
         transition: width 0.2s linear;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        border-right: var(--border-width) solid var(--color-text);
+      }
+
+      .progress-bar-knob {
+        width: 4px;
+        height: 12px;
+        background: var(--color-text);
+        margin-right: 2px;
       }
 
       .progress-times {
         display: flex; justify-content: space-between;
-        font-size: clamp(0.625rem, 1.5vw, 0.75rem);
-        font-weight: 700; letter-spacing: 0.06em;
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
+        letter-spacing: 0.06em;
       }
 
       .time-elapsed { color: var(--color-text); }
       .time-total { color: var(--color-text-muted); }
 
       .transport-controls {
-        display: flex; align-items: center; justify-content: center;
-        gap: clamp(16px, 5vw, 36px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(12px, 3vw, 24px);
+        margin-top: 8px;
       }
 
-      .ctrl-btn {
-        display: flex; align-items: center; justify-content: center;
-        border: var(--border-width) solid currentColor;
+      .stop-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: var(--border-width) solid var(--color-tertiary);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
         background: var(--color-surface);
         cursor: pointer;
         transition: transform 0.05s ease, box-shadow 0.05s ease;
         padding: 0;
-        color: var(--color-text);
+        color: var(--color-tertiary);
         -webkit-tap-highlight-color: transparent;
         outline: none;
       }
 
-      .ctrl-btn:active { transform: translate(2px, 2px); box-shadow: none !important; }
-      .ctrl-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-
-      .ctrl-btn--primary {
-        width: clamp(52px, 14vw, 72px);
-        height: clamp(52px, 14vw, 72px);
-        border-color: var(--color-secondary);
-        box-shadow: 6px 6px 0px var(--color-primary);
-        background: var(--color-surface-elevated);
+      .stop-btn:active {
+        transform: translate(var(--shadow-offset), var(--shadow-offset));
+        box-shadow: none;
       }
 
-      .ctrl-btn--side {
-        width: clamp(36px, 9vw, 48px);
-        height: clamp(36px, 9vw, 48px);
-        border-color: var(--color-primary);
-        box-shadow: 3px 3px 0px oklch(52% 0.32 262 / 0.6);
+      .stop-glyph {
+        font-size: clamp(0.875rem, 2.5vw, 1rem);
+        line-height: 1;
       }
-
-      .ctrl-glyph { font-size: clamp(1rem, 3vw, 1.5rem); line-height: 1; }
-      .ctrl-btn--primary .ctrl-glyph { font-size: clamp(1.5rem, 4vw, 2rem); }
-
-      .volume-section {
-        display: flex; align-items: center; gap: 10px;
-      }
-
-      .volume-label {
-        font-size: clamp(0.625rem, 1.5vw, 0.75rem);
-        font-weight: 800; letter-spacing: 0.08em;
-        color: var(--color-secondary);
-        white-space: nowrap; min-width: 52px;
-      }
-
-      .volume-bar-track {
-        flex: 1; height: 8px;
-        border: 2px solid var(--color-primary);
-        background: var(--color-surface);
-        overflow: hidden;
-      }
-
-      .volume-bar-fill {
-        height: 100%;
-        width: calc(var(--vol) * 1%);
-        background: var(--color-secondary);
-        transition: width 0.15s ease;
-      }
-
-      .stop-btn {
-        display: flex; align-items: center; justify-content: center;
-        width: clamp(32px, 8vw, 44px);
-        height: clamp(32px, 8vw, 44px);
-        border: var(--border-width) solid var(--color-tertiary);
-        box-shadow: 3px 3px 0px var(--color-primary);
-        background: var(--color-surface);
-        cursor: pointer;
-        transition: transform 0.05s ease, box-shadow 0.05s ease;
-        padding: 0; color: var(--color-tertiary);
-        -webkit-tap-highlight-color: transparent; outline: none;
-      }
-
-      .stop-btn:active { transform: translate(2px, 2px); box-shadow: none !important; }
-      .stop-glyph { font-size: clamp(0.875rem, 2.5vw, 1.125rem); line-height: 1; }
 
       .status-bar {
-        display: flex; align-items: center; justify-content: space-between;
-        padding-top: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding-top: 8px;
         flex-shrink: 0;
-        margin-top: auto;
-        border-top: 2px solid oklch(15% 0.02 260 / 0.1);
+        border-top: var(--border-width) solid var(--color-text);
       }
 
       .status-label {
-        font-size: clamp(0.625rem, 1.5vw, 0.6875rem);
-        font-weight: 800; letter-spacing: 0.12em;
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 800;
+        letter-spacing: 0.12em;
         color: var(--color-text-muted);
       }
 
@@ -411,15 +444,15 @@ export function Player() {
       @keyframes status-blink { 50% { opacity: 0; } }
 
       .status-dot {
-        width: 10px; height: 10px;
-        border: 2px solid oklch(15% 0.02 260 / 0.3);
+        width: 12px; height: 12px;
+        border: 2px solid var(--color-outline);
         background: transparent;
       }
 
       .status-dot[data-state='playing'] {
         background: var(--color-secondary);
         border-color: var(--color-secondary);
-        box-shadow: 0 0 8px oklch(52% 0.32 262 / 0.6);
+        box-shadow: 0 0 10px var(--color-secondary-container);
       }
 
       .status-dot[data-state='paused'] {
@@ -437,15 +470,6 @@ export function Player() {
         background: var(--color-tertiary);
         border-color: var(--color-tertiary);
         animation: status-blink 0.25s step-end infinite;
-      }
-
-      .track-format {
-        font-size: clamp(0.55rem, 1.3vw, 0.65rem);
-        color: var(--color-text-muted);
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        margin: 2px 0 0 0;
-        opacity: 0.6;
       }
     </style>
   </>;

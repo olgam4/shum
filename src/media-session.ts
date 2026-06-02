@@ -1,15 +1,24 @@
-import { effect } from 'ripple';
-import { trackCtx, playbackCtx } from './context';
-import { actions } from './actions';
+import { effect } from "ripple";
+import { nowPlaying } from "./stores/now-playing";
+import { requestPlay, requestPause, nextInQueue } from "./stores/now-playing";
 
 export function setupMediaSession() {
   effect(() => {
-    const meta = trackCtx.get().current.value;
-    if (!meta || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+    const meta = nowPlaying.track.current.value;
+    if (
+      !meta ||
+      typeof navigator === "undefined" ||
+      !("mediaSession" in navigator)
+    )
+      return;
 
     const artwork: MediaImage[] = [];
     if (meta.coverArtUrl) {
-      artwork.push({ src: meta.coverArtUrl, sizes: '512x512', type: 'image/jpeg' });
+      artwork.push({
+        src: meta.coverArtUrl,
+        sizes: "512x512",
+        type: "image/jpeg",
+      });
     }
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -21,21 +30,23 @@ export function setupMediaSession() {
   });
 
   effect(() => {
-    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
-    const state = playbackCtx.get().state.value;
-    navigator.mediaSession.playbackState = state === 'playing' ? 'playing' : 'paused';
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator))
+      return;
+    const state = nowPlaying.playback.state.value;
+    navigator.mediaSession.playbackState =
+      state === "playing" ? "playing" : "paused";
   });
 
-  if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => {
-      const t = trackCtx.get().current.value;
-      if (t) actions.requestPlay(t);
+  if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+    navigator.mediaSession.setActionHandler("play", () => {
+      const t = nowPlaying.track.current.value;
+      if (t) requestPlay(t);
     });
-    navigator.mediaSession.setActionHandler('pause', () => actions.requestPause());
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      actions.nextInQueue().catch(() => {});
+    navigator.mediaSession.setActionHandler("pause", () => requestPause());
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      nextInQueue().catch(() => {});
     });
-    navigator.mediaSession.setActionHandler('previoustrack', null);
-    navigator.mediaSession.setActionHandler('seekto', null);
+    navigator.mediaSession.setActionHandler("previoustrack", null);
+    navigator.mediaSession.setActionHandler("seekto", null);
   }
 }

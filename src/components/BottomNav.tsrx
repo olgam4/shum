@@ -1,30 +1,29 @@
 import type { Route } from '../types';
-import { actions } from '../actions';
-import { routeCtx, trackCtx } from '../context';
+import { haptic } from '../stores/now-playing';
+import { router, navigate } from '../stores/router';
 
 export function BottomNav() {
-  const rt = routeCtx.get();
-  const tk = trackCtx.get();
+  const rt = router.state;
 
   return <>
     <nav class="bottom-nav">
       <button class="nav-tab" data-active={rt.current.value === 'home'} onClick={() => {
-        actions.haptic('selection');
-        rt.current.value = 'home';
+        haptic('selection');
+        navigate('home');
       }}>
         <span class="nav-icon">{'⌘'}</span>
         <span class="nav-label">{'Home'}</span>
       </button>
       <button class="nav-tab" data-active={rt.current.value === 'library' || rt.current.value === 'artist' || rt.current.value === 'album'} onClick={() => {
-        actions.haptic('selection');
-        rt.current.value = 'library';
+        haptic('selection');
+        navigate('library');
       }}>
         <span class="nav-icon">{'▤'}</span>
         <span class="nav-label">{'Library'}</span>
       </button>
       <button class="nav-tab" data-active={rt.current.value === 'settings'} onClick={() => {
-        actions.haptic('selection');
-        rt.current.value = 'settings';
+        haptic('selection');
+        navigate('settings');
       }}>
         <span class="nav-icon">{'⛭'}</span>
         <span class="nav-label">{'Settings'}</span>
@@ -35,47 +34,59 @@ export function BottomNav() {
       .bottom-nav {
         width: 100%;
         flex-shrink: 0;
-        height: calc(var(--bottom-nav-height) + 4px + env(safe-area-inset-bottom, 0px) / 2);
-        padding-top: 4px;
+        height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) / 2);
         padding-bottom: calc(env(safe-area-inset-bottom, 0px) / 2);
-        padding-left: clamp(16px, 5vw, 48px);
-        padding-right: clamp(16px, 5vw, 48px);
-        display: flex;
-        background: var(--color-surface-elevated);
-        border-top: var(--border-width) solid var(--color-primary);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        background: var(--color-surface);
+        border-top: var(--border-width) solid var(--color-text);
         z-index: 100;
       }
 
       .nav-tab {
-        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 2px;
-        min-height: var(--tap-min);
         border: none;
+        border-right: 2px solid var(--color-text);
         background: transparent;
         color: var(--color-text-muted);
         cursor: pointer;
-        transition: color 0.2s ease;
+        transition: background 0.15s ease, color 0.15s ease;
         -webkit-tap-highlight-color: transparent;
         outline: none;
         padding: 0;
+        min-height: var(--tap-min);
+      }
+
+      .nav-tab:last-child {
+        border-right: none;
       }
 
       .nav-tab[data-active='true'] {
-        color: var(--color-secondary);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+      }
+
+      .nav-tab:hover:not([data-active='true']) {
+        background: var(--color-tertiary);
+        color: var(--color-on-tertiary);
+      }
+
+      .nav-tab:active:not([data-active='true']) {
+        background: var(--color-secondary-container);
       }
 
       .nav-icon {
-        font-size: clamp(22px, 6vw, 28px);
+        font-size: clamp(22px, 5vw, 28px);
         line-height: 1;
-        text-align: center;
       }
 
       .nav-label {
-        font-size: clamp(0.5rem, 1.1vw, 0.6rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
         font-weight: 700;
         letter-spacing: 0.04em;
       }

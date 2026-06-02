@@ -6,7 +6,7 @@
 
 ## init
 
-```mask
+```sh
 ## deps.frontend
 bun install
 
@@ -29,14 +29,14 @@ YOUR_TEAM_ID
 
 ## dev
 
-```mask
+```sh
 ## Start the Vite + Ripple-TS frontend (web only, no native)
 bun run dev
 ```
 
 ## dev-ios
 
-```mask
+```sh
 ## Build + run on iOS Simulator with hot reload
 ## Requires: bun run dev running in a separate terminal (Terminal 1)
 ##
@@ -46,7 +46,7 @@ bun run dev
 
 ## dev-ios-pro
 
-```mask
+```sh
 ## Build + run on iPhone 17 Pro (non-interactive, hot reload)
 ## Needs bun run dev running separately
 cargo tauri ios dev --device "iPhone 17 Pro"
@@ -54,7 +54,7 @@ cargo tauri ios dev --device "iPhone 17 Pro"
 
 ## dev-ios-host
 
-```mask
+```sh
 ## Build + deploy to physical iPhone via USB
 ## Requires: Apple Developer Team ID in tauri.conf.json
 bun run build && cargo tauri ios dev --host
@@ -64,14 +64,14 @@ bun run build && cargo tauri ios dev --host
 
 ## build
 
-```mask
+```sh
 ## Build frontend to dist/
 bun run build
 ```
 
 ## build-ios
 
-```mask
+```sh
 ## One-shot build + install on simulator (no hot reload)
 ## Uses pre-built dist/ — no dev server needed
 bun run build && cargo tauri ios build --debug
@@ -79,14 +79,14 @@ bun run build && cargo tauri ios build --debug
 
 ## build-rust
 
-```mask
+```sh
 ## Check Rust compilation (fast, no linking)
 cd src-tauri && cargo check
 ```
 
 ## build-rust-release
 
-```mask
+```sh
 ## Build Rust in release mode
 cd src-tauri && cargo build --release
 ```
@@ -95,7 +95,7 @@ cd src-tauri && cargo build --release
 
 ## check
 
-```mask
+```sh
 ## TypeScript type-check
 bun run typecheck
 
@@ -111,7 +111,7 @@ bun run format:check
 
 ## fix
 
-```mask
+```sh
 ## Auto-fix formatting
 bun run format
 
@@ -123,7 +123,7 @@ cd src-tauri && cargo clippy --fix --allow-dirty --allow-staged
 
 ## clean
 
-```mask
+```sh
 ## Full clean (frontend + Rust)
 rm -rf dist/
 cd src-tauri && cargo clean
@@ -131,7 +131,7 @@ cd src-tauri && cargo clean
 
 ## clean-ios
 
-```mask
+```sh
 ## Remove Xcode project + regenerate from scratch
 rm -rf src-tauri/gen/apple/
 cargo tauri ios init
@@ -139,9 +139,49 @@ cargo tauri ios init
 
 ---
 
+## build-ios-device
+
+```sh
+## Build release IPA for physical device (arm64)
+## Output: src-tauri/gen/apple/build/arm64/SHUM.ipa
+cargo tauri ios build
+```
+
+## devices
+
+```sh
+## List all connected iPhones/iPads
+xcrun devicectl list devices
+```
+
+## deploy-ios
+
+```sh
+## Install SHUM on a connected device
+## Run `mask devices` first to find your device UDID
+xcrun devicectl device install app --device 00008120-001A08112178A01E src-tauri/gen/apple/build/arm64/SHUM.ipa
+```
+
+## remove-ios
+
+```sh
+## Remove SHUM from a connected device
+## Run `mask devices` first to find your device UDID
+xcrun devicectl device uninstall app --device 00008120-001A08112178A01E sh.anomaly.shum
+```
+
+## rebuild-ios-device
+
+```sh
+## Full device deployment pipeline (run after config changes)
+rm -rf src-tauri/gen/apple/ && cargo tauri ios init && cargo tauri ios build
+```
+
+---
+
 ## xcode
 
-```mask
+```sh
 ## Open the Xcode project (auto-detects sim or device target)
 open src-tauri/gen/apple/ios-sim-*/SHUM.xcodeproj 2>/dev/null
 open src-tauri/gen/apple/ios-*/SHUM.xcodeproj 2>/dev/null
@@ -149,7 +189,7 @@ open src-tauri/gen/apple/ios-*/SHUM.xcodeproj 2>/dev/null
 
 ## sim
 
-```mask
+```sh
 ## List available iPhone simulators
 xcrun simctl list devices available | grep -v "unavailable" | grep iPhone
 
@@ -170,7 +210,7 @@ xcrun simctl erase "iPhone 17 Pro"
 
 ## logs
 
-```mask
+```sh
 ## Stream all logs from the SHUM app on simulator
 xcrun simctl spawn booted log stream --predicate 'processImagePath CONTAINS "shum"' --style compact
 
@@ -188,7 +228,7 @@ xcrun simctl spawn booted log stream --style compact 2>&1 | grep -i shum
 
 ## deps
 
-```mask
+```sh
 ## Install / update frontend dependencies
 bun install
 
@@ -206,7 +246,7 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 
 ## info
 
-```mask
+```sh
 ## System tooling audit
 xcrun xcodebuild -version
 rustup show active-toolchain
@@ -220,7 +260,7 @@ system_profiler SPDeveloperToolsDataType | grep -A2 "Xcode:"
 
 ## quick
 
-```mask
+```sh
 ## Full dev cycle into simulator (one-shot, no hot reload)
 cd src-tauri && cargo check && cd ..
 bun run build

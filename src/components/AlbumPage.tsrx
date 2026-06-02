@@ -1,15 +1,18 @@
 import { track } from 'ripple';
-import { actions } from '../actions';
+import { haptic, setQueue, addToQueue, getCoverArtUrl, playSong } from '../stores/now-playing';
+import { library } from '../stores/library';
+import { router, navigate } from '../stores/router';
 import { formatTime } from '../state';
-import { ctx, libraryCtx, routeCtx } from '../context';
+import { IconButton } from './IconButton.tsrx';
+import { TrackRow } from './TrackRow.tsrx';
 
 export function AlbumPage() {
-  const lib = libraryCtx.get();
-  const rt = routeCtx.get();
+  const lib = library.state;
+  const rt = router.state;
 
-  const albumId = ctx.selectedAlbum.id.value;
-  const albumName = ctx.selectedAlbum.name.value;
-  const artistName = ctx.selectedAlbum.artistName.value;
+  const albumId = router.selectedAlbum.id.value;
+  const albumName = router.selectedAlbum.name.value;
+  const artistName = router.selectedAlbum.artistName.value;
 
   const songs = track(() => lib.data.value.songs
     .filter(s => s.albumId === albumId)
@@ -19,35 +22,63 @@ export function AlbumPage() {
   return <>
     <div class="album-page">
       <div class="album-header">
-        <button class="back-btn" onClick={() => {
-          actions.haptic('light');
-          rt.current.value = 'library';
-        }}>{'←'}</button>
+        <IconButton icon="\u2190" size="sm" onClick={() => {
+          haptic('light');
+          navigate('library');
+        }} />
         <div class="album-info">
           <div class="album-title">{albumName}</div>
           <div class="album-by">{artistName}</div>
         </div>
+      </div>
+      <div class="album-art">
+        <div class="album-art__placeholder">{'\u25C9'}</div>
+        <div class="album-art__year">{'LP / 2024'}</div>
+        <div class="album-art__badge">{'STEREO'}</div>
+      </div>
+      <div class="album-meta">
+        <div class="album-meta__header">
+          <h2 class="album-meta__title">{albumName}</h2>
+          <p class="album-meta__artist">{artistName}</p>
+        </div>
+        <div class="album-meta__actions">
+          <IconButton icon="" label="Play All" variant="primary" size="lg" onClick={async () => {
+            haptic('light');
+            const first = songs.value[0];
+            if (first) {
+              setQueue(first);
+              const covUrl = await getCoverArtUrl(first.coverArt);
+              await playSong(first, covUrl);
+            }
+          }} />
+          <IconButton icon="" label="Save" variant="secondary" size="lg" onClick={() => {
+            haptic('light');
+          }} />
+        </div>
+      </div>
+      <div class="album-tracklist-header">
+        <span>{`Tracks \u00B7 ${songs.value.length} \u00B7 ${formatTime(songs.value.reduce((a, s) => a + s.duration, 0))}`}</span>
       </div>
       <div class="album-tracks">
         if (songs.value.length === 0) {
           <div class="empty-msg">{'No tracks found.'}</div>
         } else {
           for (const s of songs.value; index i) {
-            <button class="track-row" data-even={i % 2 === 0} onClick={async () => {
-              actions.haptic('light');
-              actions.setQueue(s);
-              const covUrl = await actions.getCoverArtUrl(s.coverArt);
-              await actions.requestPlaySong(s, covUrl);
-            }}>
-              <span class="track-num">{`${String(s.track).padStart(2, '0')}`}</span>
-              <span class="track-title">{s.title}</span>
-              <span class="track-dur">{formatTime(s.duration)}</span>
-              <span class="track-add" onClick={(e) => {
+            <TrackRow
+              song={s}
+              index={i}
+              onPlay={async () => {
+                haptic('light');
+                setQueue(s);
+                const covUrl = await getCoverArtUrl(s.coverArt);
+                await playSong(s, covUrl);
+              }}
+              onAdd={(e: Event) => {
                 e.stopPropagation();
-                actions.haptic('selection');
-                actions.addToQueue(s);
-              }}>{'+'}</span>
-            </button>
+                haptic('selection');
+                addToQueue(s);
+              }}
+            />
           }
         }
       </div>
@@ -64,33 +95,11 @@ export function AlbumPage() {
         flex-shrink: 0;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: clamp(8px, 2vw, 14px);
-        border-bottom: var(--border-width) solid var(--color-primary);
+        gap: 14px;
+        padding: var(--gutter) var(--margin);
+        border-bottom: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
         background: var(--color-surface-elevated);
-      }
-
-      .back-btn {
-        flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        border: var(--border-width) solid var(--color-secondary);
-        background: var(--color-surface);
-        color: var(--color-secondary);
-        font-family: var(--font-family);
-        font-size: clamp(1rem, 3vw, 1.25rem);
-        font-weight: 800;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        -webkit-tap-highlight-color: transparent;
-        outline: none;
-      }
-
-      .back-btn:active {
-        transform: translate(1px, 1px);
       }
 
       .album-info {
@@ -99,19 +108,118 @@ export function AlbumPage() {
       }
 
       .album-title {
-        font-size: clamp(0.9rem, 2.5vw, 1.25rem);
-        font-weight: 900;
-        color: var(--color-secondary);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-bold);
+        font-weight: 800;
+        color: var(--color-text);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
       .album-by {
-        font-size: clamp(0.6rem, 1.4vw, 0.7rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
         color: var(--color-text-muted);
         font-weight: 400;
-        margin-top: 1px;
+        margin-top: 2px;
+      }
+
+      .album-art {
+        aspect-ratio: 1;
+        border: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset-lg) var(--shadow-offset-lg) 0 var(--color-text);
+        background: var(--color-primary-container);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: var(--margin);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .album-art__placeholder {
+        font-size: clamp(4rem, 15vw, 8rem);
+        color: var(--color-on-primary-container);
+        opacity: 0.5;
+      }
+
+      .album-art__year {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: var(--unit) var(--gutter);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+        border-right: var(--border-width) solid var(--color-text);
+        border-bottom: var(--border-width) solid var(--color-text);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
+      }
+
+      .album-art__badge {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        padding: var(--unit) var(--gutter);
+        background: var(--color-tertiary);
+        color: var(--color-on-tertiary);
+        border-left: var(--border-width) solid var(--color-text);
+        border-top: var(--border-width) solid var(--color-text);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
+      }
+
+      .album-meta {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gutter);
+        padding: 0 var(--margin);
+      }
+
+      .album-meta__header {
+        text-align: center;
+      }
+
+      .album-meta__title {
+        font-family: var(--font-family);
+        font-size: var(--fs-headline-md);
+        font-weight: 900;
+        line-height: var(--lh-headline);
+        color: var(--color-text);
+        margin: 0;
+        word-break: break-word;
+      }
+
+      .album-meta__artist {
+        font-family: var(--font-family);
+        font-size: var(--fs-body-bold);
+        font-weight: 700;
+        color: var(--color-primary);
+        margin: 6px 0 0 0;
+      }
+
+      .album-meta__actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--gutter);
+      }
+
+      .album-tracklist-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: var(--margin) var(--margin) 0 var(--margin);
+        padding: 6px 12px;
+        border: var(--border-width) solid var(--color-text);
+        background: var(--color-text);
+        color: var(--color-surface-lowest);
+        font-family: var(--font-family);
+        font-size: var(--fs-metadata);
+        font-weight: 700;
+        letter-spacing: 0.06em;
       }
 
       .album-tracks {
@@ -119,87 +227,20 @@ export function AlbumPage() {
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
-      }
-
-      .track-row {
-        display: grid;
-        grid-template-columns: 26px 1fr auto auto;
-        gap: 6px;
-        align-items: center;
-        width: 100%;
-        min-height: 44px;
-        padding: 4px clamp(8px, 2vw, 14px);
-        box-sizing: border-box;
-        border: none;
-        border-bottom: 1px solid oklch(15% 0.02 260 / 0.06);
-        background: transparent;
-        cursor: pointer;
-        color: var(--color-text);
-        font-family: var(--font-family);
-        text-align: left;
-        -webkit-tap-highlight-color: transparent;
-        outline: none;
-      }
-
-      .track-row[data-even='true'] {
-        background: oklch(15% 0.02 260 / 0.015);
-      }
-
-      .track-row:active {
-        background: oklch(15% 0.02 260 / 0.06);
-      }
-
-      .track-num {
-        font-size: clamp(0.5rem, 1.1vw, 0.6rem);
-        font-weight: 400;
-        color: var(--color-text-muted);
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .track-title {
-        font-size: clamp(0.65rem, 1.5vw, 0.75rem);
-        font-weight: 700;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .track-dur {
-        font-size: clamp(0.5rem, 1.1vw, 0.6rem);
-        font-weight: 400;
-        color: var(--color-text-muted);
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-      }
-
-      .track-add {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        border: 2px solid var(--color-secondary);
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
-        font-weight: 800;
-        color: var(--color-secondary);
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        -webkit-user-select: none;
-        user-select: none;
-      }
-
-      .track-add:active {
-        background: var(--color-secondary);
-        color: var(--color-surface);
+        margin: 0 var(--margin) var(--margin) var(--margin);
+        border: var(--border-width) solid var(--color-text);
+        border-top: none;
+        box-shadow: var(--shadow-offset-lg) var(--shadow-offset-lg) 0 var(--color-text);
+        background: var(--color-surface-lowest);
       }
 
       .empty-msg {
         text-align: center;
         padding: 48px 0;
         color: var(--color-text-muted);
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-reg);
+        font-weight: 400;
       }
     </style>
   </>;

@@ -84,11 +84,11 @@ A self-hosted music streaming app for iOS that connects to a [Navidrome](https:/
 
 ### The three layers
 
-| Layer | File(s) | Responsibility | Writes to |
-|---|---|---|---|
-| **IPC Boundary** | `actions.ts` | Every `invoke()` call lives here. Components request actions; this module talks to Rust. | Rust commands |
-| **State Mirror** | `state.ts` | Read-only `Tracked<T>` values, updated exclusively by Tauri event callbacks. `applyState()` is the single writer. | Nothing (mirrors only) |
-| **Render** | `components/*.tsrx` | Pure functions. Receive state via props, render DOM. User clicks call `actions.*`. | Nothing |
+| Layer            | File(s)             | Responsibility                                                                                                    | Writes to              |
+| ---------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **IPC Boundary** | `actions.ts`        | Every `invoke()` call lives here. Components request actions; this module talks to Rust.                          | Rust commands          |
+| **State Mirror** | `state.ts`          | Read-only `Tracked<T>` values, updated exclusively by Tauri event callbacks. `applyState()` is the single writer. | Nothing (mirrors only) |
+| **Render**       | `components/*.tsrx` | Pure functions. Receive state via props, render DOM. User clicks call `actions.*`.                                | Nothing                |
 
 No component ever imports `invoke` or `listen` directly. No component ever calls `.set()` on a `Tracked` value. The separation is enforced by convention and validated by the import graph.
 
@@ -96,26 +96,26 @@ No component ever imports `invoke` or `listen` directly. No component ever calls
 
 ## Why Rust Owns All State
 
-| Concern | If state lived in JavaScript | With Rust state |
-|---|---|---|
-| **iOS background audio** | WKWebView JS timers are suspended by iOS. Playback stops silently. | Rust `std::thread` runs on the native process, immune to WebView throttling. |
-| **Memory pressure** | iOS may kill the WebView, losing all JS state. | `Arc<Mutex<AudioState>>` lives in the native binary. The WebView reconnects to existing state on reload. |
-| **Single source of truth** | State split across JS and native creates stale mirrors and race conditions. | Rust is authoritative. JS holds a read-only rendering mirror, updated by push events. |
-| **Thread safety** | JavaScript is single-threaded by design. | `Mutex` guards the shared state. The position ticker thread and IPC thread cannot race. |
-| **Audio latency** | JS → bridge → native adds a frame of latency. | Commands execute directly on the native thread. |
+| Concern                    | If state lived in JavaScript                                                | With Rust state                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **iOS background audio**   | WKWebView JS timers are suspended by iOS. Playback stops silently.          | Rust `std::thread` runs on the native process, immune to WebView throttling.                             |
+| **Memory pressure**        | iOS may kill the WebView, losing all JS state.                              | `Arc<Mutex<AudioState>>` lives in the native binary. The WebView reconnects to existing state on reload. |
+| **Single source of truth** | State split across JS and native creates stale mirrors and race conditions. | Rust is authoritative. JS holds a read-only rendering mirror, updated by push events.                    |
+| **Thread safety**          | JavaScript is single-threaded by design.                                    | `Mutex` guards the shared state. The position ticker thread and IPC thread cannot race.                  |
+| **Audio latency**          | JS → bridge → native adds a frame of latency.                               | Commands execute directly on the native thread.                                                          |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Role |
-|---|---|---|
-| Audio Engine | Rust + `AVAudioEngine` (iOS) | Decode, buffer, and play audio streams |
-| State Machine | `Arc<Mutex<AudioState>>` | Authoritative playback state |
-| IPC | Tauri v2 (`#[tauri::command]` + `Emitter`) | Type-safe Rust ↔ JavaScript communication |
-| UI Framework | [Ripple-TS](https://www.ripple-ts.com/) (`.tsrx`) | Declarative reactive rendering with fine-grained updates |
-| Styling | Scoped CSS + `oklch()` semantic tokens | Brutalist aesthetic, single-source theming |
-| Bundler | Vite + `@ripple-ts/vite-plugin` | HMR in development, tree-shaken production builds |
+| Layer         | Technology                                        | Role                                                     |
+| ------------- | ------------------------------------------------- | -------------------------------------------------------- |
+| Audio Engine  | Rust + `AVAudioEngine` (iOS)                      | Decode, buffer, and play audio streams                   |
+| State Machine | `Arc<Mutex<AudioState>>`                          | Authoritative playback state                             |
+| IPC           | Tauri v2 (`#[tauri::command]` + `Emitter`)        | Type-safe Rust ↔ JavaScript communication                |
+| UI Framework  | [Ripple-TS](https://www.ripple-ts.com/) (`.tsrx`) | Declarative reactive rendering with fine-grained updates |
+| Styling       | Scoped CSS + `oklch()` semantic tokens            | Brutalist aesthetic, single-source theming               |
+| Bundler       | Vite + `@ripple-ts/vite-plugin`                   | HMR in development, tree-shaken production builds        |
 
 ---
 
@@ -169,30 +169,36 @@ Components call functions on `actions.ts`. That is the **only** module that impo
 
 ```ts
 // src/actions.ts
-import { invoke } from '@tauri-apps/api/core';
-import type { TrackMeta } from './types';
+import { invoke } from "@tauri-apps/api/core";
+import type { TrackMeta } from "./types";
 
 export const actions = {
   requestPause() {
-    return invoke('pause');
+    return invoke("pause");
   },
 
   requestPlay(track: TrackMeta | null) {
-    if (track) return invoke('resume');
-    return invoke('playTrack', {
-      id: 'default',
-      title: 'Test Tone',
-      artist: 'SHUM',
-      album: 'System',
+    if (track) return invoke("resume");
+    return invoke("playTrack", {
+      id: "default",
+      title: "Test Tone",
+      artist: "SHUM",
+      album: "System",
       durationSecs: 180,
       coverArtUrl: null,
-      streamUrl: 'https://example.com/tone.mp3',
+      streamUrl: "https://example.com/tone.mp3",
     });
   },
 
-  requestStop()        { return invoke('stop'); },
-  requestSeek(pos: number)  { return invoke('seek', { positionSecs: pos }); },
-  requestSetVolume(v: number) { return invoke('setVolume', { volume: v }); },
+  requestStop() {
+    return invoke("stop");
+  },
+  requestSeek(pos: number) {
+    return invoke("seek", { positionSecs: pos });
+  },
+  requestSetVolume(v: number) {
+    return invoke("setVolume", { volume: v });
+  },
 };
 ```
 
@@ -240,15 +246,15 @@ std::thread::spawn(move || {
 
 ```ts
 // src/App.tsrx
-listen<AudioState>('shum:state-changed', (e) => s.applyState(e.payload));
+listen<AudioState>("shum:state-changed", (e) => s.applyState(e.payload));
 ```
 
 ```ts
 // src/state.ts
 function applyState(s: AudioState): void {
   if (s.currentTrack !== undefined) _track.set(s.currentTrack);
-  if (s.playbackState)              _playback.set(s.playbackState);
-  if (s.volume !== undefined)       _volume.set(s.volume);
+  if (s.playbackState) _playback.set(s.playbackState);
+  if (s.volume !== undefined) _volume.set(s.volume);
   if (s.positionSecs !== undefined) _progress.set(s.positionSecs);
   if (s.currentTrack?.durationSecs) _duration.set(s.currentTrack.durationSecs);
 }
@@ -302,58 +308,58 @@ All colors derive from three primitives and a neutral set. Change the three `--p
 
 ### Primitive Tokens
 
-| Token | Hex | `oklch()` | Role |
-|---|---|---|---|
-| `--pr-yellow` | `#FFDA29` | `oklch(89% 0.21 100)` | Raw brand color |
-| `--pr-gentian` | `#3366FF` | `oklch(52% 0.32 262)` | Raw accent color |
-| `--pr-ruby` | `#F10C45` | `oklch(53% 0.28 12)` | Raw danger/stop color |
-| `--pr-ink` | — | `oklch(12% 0.02 260)` | Deepest background |
-| `--pr-ink-raised` | — | `oklch(16% 0.02 260)` | Elevated surfaces |
-| `--pr-white` | — | `oklch(98% 0 0)` | Pure white |
+| Token             | Hex       | `oklch()`             | Role                  |
+| ----------------- | --------- | --------------------- | --------------------- |
+| `--pr-yellow`     | `#FFDA29` | `oklch(89% 0.21 100)` | Raw brand color       |
+| `--pr-gentian`    | `#3366FF` | `oklch(52% 0.32 262)` | Raw accent color      |
+| `--pr-ruby`       | `#F10C45` | `oklch(53% 0.28 12)`  | Raw danger/stop color |
+| `--pr-ink`        | —         | `oklch(12% 0.02 260)` | Deepest background    |
+| `--pr-ink-raised` | —         | `oklch(16% 0.02 260)` | Elevated surfaces     |
+| `--pr-white`      | —         | `oklch(98% 0 0)`      | Pure white            |
 
 ### Semantic Tokens
 
 Each primitive is assigned a **role** via a semantic alias. Components never reference primitives directly — they use the role tokens.
 
-| Token | Maps to | Used for |
-|---|---|---|
-| `--color-primary` | `--pr-yellow` | Borders, highlights, progress fill, shadows, pause indicator |
-| `--color-secondary` | `--pr-gentian` | Accent borders, playing indicator, artist name, volume fill |
-| `--color-tertiary` | `--pr-ruby` | Stop button, buffering indicator, error states |
-| `--color-surface` | `--pr-ink` | Page background, button background |
-| `--color-surface-elevated` | `--pr-ink-raised` | Now Playing panel, primary buttons |
-| `--color-text` | `--pr-white` | Primary text everywhere |
-| `--color-text-muted` | `oklch(98% 0 0 / 0.45)` | Secondary labels, album name, time total |
-| `--border-width` | `3px` | All structural borders |
-| `--shadow-offset` | `4px` | Neo-brutalist box-shadow offset |
-| `--font-family` | `'SF Mono', 'Fira Code', 'Courier New', monospace` | Global typography |
+| Token                      | Maps to                                            | Used for                                                     |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| `--color-primary`          | `--pr-yellow`                                      | Borders, highlights, progress fill, shadows, pause indicator |
+| `--color-secondary`        | `--pr-gentian`                                     | Accent borders, playing indicator, artist name, volume fill  |
+| `--color-tertiary`         | `--pr-ruby`                                        | Stop button, buffering indicator, error states               |
+| `--color-surface`          | `--pr-ink`                                         | Page background, button background                           |
+| `--color-surface-elevated` | `--pr-ink-raised`                                  | Now Playing panel, primary buttons                           |
+| `--color-text`             | `--pr-white`                                       | Primary text everywhere                                      |
+| `--color-text-muted`       | `oklch(98% 0 0 / 0.45)`                            | Secondary labels, album name, time total                     |
+| `--border-width`           | `3px`                                              | All structural borders                                       |
+| `--shadow-offset`          | `4px`                                              | Neo-brutalist box-shadow offset                              |
+| `--font-family`            | `'SF Mono', 'Fira Code', 'Courier New', monospace` | Global typography                                            |
 
 ### How to Re-skin
 
 Change these three lines in `src/App.tsrx` — every component follows:
 
 ```css
---pr-yellow: oklch(89% 0.21 100);   /* primary */
---pr-gentian: oklch(52% 0.32 262);   /* secondary */
---pr-ruby: oklch(53% 0.28 12);      /* tertiary */
+--pr-yellow: oklch(89% 0.21 100); /* primary */
+--pr-gentian: oklch(52% 0.32 262); /* secondary */
+--pr-ruby: oklch(53% 0.28 12); /* tertiary */
 ```
 
 ### Token Assignment Logic
 
-| UI Element | Uses | Reason |
-|---|---|---|
-| Progress bar fill | `--color-primary` | Dominant, attention-grabbing |
-| Marquee title | `--color-primary` | Most important text |
-| Now Playing border | `--color-primary` | Structural anchor |
-| Play button shadow | `--color-primary` | Primary CTA reinforcement |
-| Playing state dot | `--color-secondary` | Calm, steady "active" signifier |
-| Artist name | `--color-secondary` | Secondary information |
-| Album art border | `--color-secondary` | Visual frame, not main focus |
-| Stop button | `--color-tertiary` | Destructive/terminal action |
-| Buffering indicator | `--color-tertiary` | Transient, alerting state |
-| Header char-a | `--color-tertiary` | First letter — bold opener |
-| Header char-b | `--color-primary` | Second letter — brand anchor |
-| Header char-c | `--color-secondary` | Third letter — complementary close |
+| UI Element          | Uses                | Reason                             |
+| ------------------- | ------------------- | ---------------------------------- |
+| Progress bar fill   | `--color-primary`   | Dominant, attention-grabbing       |
+| Marquee title       | `--color-primary`   | Most important text                |
+| Now Playing border  | `--color-primary`   | Structural anchor                  |
+| Play button shadow  | `--color-primary`   | Primary CTA reinforcement          |
+| Playing state dot   | `--color-secondary` | Calm, steady "active" signifier    |
+| Artist name         | `--color-secondary` | Secondary information              |
+| Album art border    | `--color-secondary` | Visual frame, not main focus       |
+| Stop button         | `--color-tertiary`  | Destructive/terminal action        |
+| Buffering indicator | `--color-tertiary`  | Transient, alerting state          |
+| Header char-a       | `--color-tertiary`  | First letter — bold opener         |
+| Header char-b       | `--color-primary`   | Second letter — brand anchor       |
+| Header char-c       | `--color-secondary` | Third letter — complementary close |
 
 ---
 
@@ -427,17 +433,17 @@ The `infoPlist` in `tauri.conf.json` already declares `UIBackgroundModes: ["audi
 
 ## Architecture Decisions
 
-| Decision | Rationale |
-|---|---|
-| **Rust state, not JS state** | iOS kills WKWebView JS timers in the background. Rust threads persist. |
-| **`Arc<Mutex<>>` not `Arc<RwLock<>>`** | Audio state mutations are short-lived (set a field, emit an event). `Mutex` has lower overhead and avoids reader starvation from the 2Hz position ticker. |
-| **Tauri events, not polling** | Push-based sync avoids wasted IPC cycles. Position ticks are the only recurring event (2Hz, lightweight). |
-| **`.tsrx` components from Ripple-TS** | Ripple-TS (by `@trueadm`) is a modern fine-grained reactivity framework. The older `ripplejs/ripple` is a different library with a different API. |
-| **`actions.ts` as single IPC boundary** | Isolates every `invoke()` call to one file. Makes testing, mocking, and auditing trivial. Components never import Tauri APIs directly. |
-| **`&{}` lazy prop destructuring** | Preserves reactivity across component boundaries. Child components re-render when the parent's `Tracked<T>` changes, without `.value` boilerplate. |
-| **Semantic CSS tokens in `:global(:root)`** | Define colors once, use everywhere via `var()`. To reskin the app, change 3 hex values in `App.tsrx`. |
-| **Concrete `AudioPlatform` trait** | `NativeAudio` is a stub. Swap in a real `AVAudioEngineAudio` implementation without touching `AudioManager<P>` or any command handler. |
-| **Position ticker on dedicated thread** | Decouples UI polling from audio playback. The ticker runs at 500ms intervals independent of the WebView's render cycle. |
+| Decision                                    | Rationale                                                                                                                                                 |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rust state, not JS state**                | iOS kills WKWebView JS timers in the background. Rust threads persist.                                                                                    |
+| **`Arc<Mutex<>>` not `Arc<RwLock<>>`**      | Audio state mutations are short-lived (set a field, emit an event). `Mutex` has lower overhead and avoids reader starvation from the 2Hz position ticker. |
+| **Tauri events, not polling**               | Push-based sync avoids wasted IPC cycles. Position ticks are the only recurring event (2Hz, lightweight).                                                 |
+| **`.tsrx` components from Ripple-TS**       | Ripple-TS (by `@trueadm`) is a modern fine-grained reactivity framework. The older `ripplejs/ripple` is a different library with a different API.         |
+| **`actions.ts` as single IPC boundary**     | Isolates every `invoke()` call to one file. Makes testing, mocking, and auditing trivial. Components never import Tauri APIs directly.                    |
+| **`&{}` lazy prop destructuring**           | Preserves reactivity across component boundaries. Child components re-render when the parent's `Tracked<T>` changes, without `.value` boilerplate.        |
+| **Semantic CSS tokens in `:global(:root)`** | Define colors once, use everywhere via `var()`. To reskin the app, change 3 hex values in `App.tsrx`.                                                     |
+| **Concrete `AudioPlatform` trait**          | `NativeAudio` is a stub. Swap in a real `AVAudioEngineAudio` implementation without touching `AudioManager<P>` or any command handler.                    |
+| **Position ticker on dedicated thread**     | Decouples UI polling from audio playback. The ticker runs at 500ms intervals independent of the WebView's render cycle.                                   |
 
 ---
 

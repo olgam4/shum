@@ -1,12 +1,14 @@
-import { actions } from '../actions';
-import { connectionCtx, libraryCtx, routeCtx, trackCtx, playbackCtx } from '../context';
+import { nowPlaying, haptic } from '../stores/now-playing';
+import { connection } from '../stores/connection';
+import { library } from '../stores/library';
+import { navigate } from '../stores/router';
+import { DataCell } from './DataCell.tsrx';
+import { IconButton } from './IconButton.tsrx';
 
 export function Home() {
-  const conn = connectionCtx.get();
-  const lib = libraryCtx.get();
-  const rt = routeCtx.get();
-  const tk = trackCtx.get();
-  const pb = playbackCtx.get();
+  const conn = connection;
+  const lib = library.state;
+  const tk = nowPlaying.track;
 
   return <>
     <div class="home">
@@ -22,27 +24,16 @@ export function Home() {
           } else if (conn.status.value !== 'connected') {
             <div class="connect-prompt">
               <p class="prompt-text">{'No server connected.'}</p>
-              <button class="prompt-btn" onClick={() => {
-                actions.haptic('light');
-                rt.current.value = 'settings';
-              }}>
-                {'Connect to Navidrome'}
-              </button>
+              <IconButton icon="" label="Connect to Navidrome" variant="secondary" onClick={() => {
+                haptic('light');
+                navigate('settings');
+              }} />
             </div>
           } else {
-            <div class="stats">
-              <div class="stat-item">
-                <span class="stat-value">{lib.songCount.value}</span>
-                <span class="stat-label">{'Songs'}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{lib.albumCount.value}</span>
-                <span class="stat-label">{'Albums'}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{lib.artistCount.value}</span>
-                <span class="stat-label">{'Artists'}</span>
-              </div>
+            <div class="stats-grid">
+              <DataCell label="Songs" value={String(lib.songCount.value)} />
+              <DataCell label="Albums" value={String(lib.albumCount.value)} />
+              <DataCell label="Artists" value={String(lib.artistCount.value)} />
             </div>
           }
         </div>
@@ -61,28 +52,33 @@ export function Home() {
         align-items: center;
         justify-content: center;
         min-height: 100%;
-        padding: clamp(16px, 4vw, 32px);
+        padding: var(--margin);
       }
 
       .welcome-card {
-        border: var(--border-width) solid var(--color-primary);
+        border: var(--border-width) solid var(--color-text);
         padding: clamp(24px, 6vw, 40px);
-        box-shadow: 8px 8px 0px var(--color-secondary);
-        background: var(--color-surface-elevated);
+        box-shadow: var(--shadow-offset-lg) var(--shadow-offset-lg) 0 var(--color-text);
+        background: var(--color-surface-lowest);
         text-align: center;
         max-width: 360px;
         width: 100%;
       }
 
       .welcome-title {
-        font-size: clamp(1.25rem, 4vw, 2rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-headline-lg);
         font-weight: 900;
-        color: var(--color-secondary);
+        letter-spacing: -0.04em;
+        line-height: var(--lh-headline);
+        color: var(--color-text);
         margin: 0 0 4px 0;
       }
 
       .welcome-sub {
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-reg);
+        font-weight: 400;
         color: var(--color-text-muted);
         margin: 0 0 20px 0;
       }
@@ -91,48 +87,22 @@ export function Home() {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
       }
 
       .prompt-text {
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
+        font-family: var(--font-family);
+        font-size: var(--fs-body-reg);
+        font-weight: 400;
         color: var(--color-text-muted);
         margin: 0;
       }
 
-      .prompt-btn {
-        min-height: var(--tap-min);
-        border: var(--border-width) solid var(--color-secondary);
-        background: var(--color-surface);
-        color: var(--color-secondary);
-        font-family: var(--font-family);
-        font-weight: 800;
-        font-size: clamp(0.75rem, 2vw, 0.875rem);
-        letter-spacing: 0.06em;
-        padding: 10px 24px;
-        cursor: pointer;
-        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-primary);
-        -webkit-tap-highlight-color: transparent;
-        outline: none;
-      }
-
-      .prompt-btn:active {
-        transform: translate(2px, 2px);
-        box-shadow: none;
-      }
-
-      .stats {
-        display: flex;
-        gap: clamp(16px, 4vw, 32px);
-        justify-content: center;
-        margin-top: 16px;
-      }
-
-      .stat-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--gutter);
+        margin-top: 20px;
       }
 
       .syncing-state {
@@ -154,37 +124,27 @@ export function Home() {
       }
 
       .syncing-text {
-        font-size: clamp(0.7rem, 1.8vw, 0.8rem);
-        font-weight: 700;
-        letter-spacing: 0.08em;
+        font-family: var(--font-family);
+        font-size: var(--fs-label);
+        font-weight: 600;
+        letter-spacing: 0.06em;
         color: var(--color-secondary);
-      }
-
-      .stat-value {
-        font-size: clamp(1.5rem, 5vw, 2.5rem);
-        font-weight: 900;
-        color: var(--color-secondary);
-      }
-
-      .stat-label {
-        font-size: clamp(0.55rem, 1.2vw, 0.65rem);
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        color: var(--color-text-muted);
       }
 
       .playing-indicator {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px 20px;
+        gap: 10px;
+        padding: 16px 24px;
+        border: var(--border-width) solid var(--color-text);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-text);
+        background: var(--color-surface-lowest);
       }
 
       .playing-dot {
-        width: 10px; height: 10px;
+        width: 12px; height: 12px;
         background: var(--color-secondary);
-        border-radius: 0;
-        box-shadow: 0 0 8px oklch(52% 0.32 262 / 0.6);
+        box-shadow: 0 0 10px var(--color-secondary-container);
         animation: home-dot-pulse 1.4s ease-in-out infinite;
       }
 
@@ -194,9 +154,10 @@ export function Home() {
       }
 
       .playing-text {
-        font-size: clamp(0.7rem, 1.8vw, 0.8rem);
-        font-weight: 700;
-        letter-spacing: 0.08em;
+        font-family: var(--font-family);
+        font-size: var(--fs-label);
+        font-weight: 600;
+        letter-spacing: 0.06em;
         color: var(--color-text-muted);
       }
     </style>

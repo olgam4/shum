@@ -2,39 +2,73 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"
+    />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="SHUM" />
-    <meta name="theme-color" content="#f7f7f0" />
+    <meta name="theme-color" content="#f9f9f9" />
     <title>SHUM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      html, body { background: #f7f7f0; margin: 0; padding: 0; height: 100dvh; width: 100%; overscroll-behavior: none; }
-      #root { min-height: 100%; }
+      html,
+      body {
+        background: #f9f9f9;
+        margin: 0;
+        padding: 0;
+        height: 100dvh;
+        width: 100%;
+        overscroll-behavior: none;
+      }
+      #root {
+        min-height: 100%;
+      }
     </style>
     <script>
-    (function() {
-      if (window.location.protocol === 'tauri:') {
-        var OrigWS = window.WebSocket;
-        window.WebSocket = function(url, protocols) {
-          if (typeof url === 'string') {
-            url = url.replace('wss://localhost', 'ws://localhost:5173');
-          }
-          return new OrigWS(url, protocols);
-        };
-        Object.setPrototypeOf(window.WebSocket, OrigWS);
-        window.WebSocket.prototype = OrigWS.prototype;
-        window.WebSocket.CONNECTING = OrigWS.CONNECTING;
-        window.WebSocket.OPEN = OrigWS.OPEN;
-        window.WebSocket.CLOSING = OrigWS.CLOSING;
-        window.WebSocket.CLOSED = OrigWS.CLOSED;
-      }
-    })();
+      (function () {
+        if (window.location.protocol === "tauri:") {
+          var OrigWS = window.WebSocket;
+          window.WebSocket = function (url, protocols) {
+            if (typeof url === "string") {
+              url = url.replace("wss://localhost", "ws://localhost:5173");
+            }
+            return new OrigWS(url, protocols);
+          };
+          Object.setPrototypeOf(window.WebSocket, OrigWS);
+          window.WebSocket.prototype = OrigWS.prototype;
+          window.WebSocket.CONNECTING = OrigWS.CONNECTING;
+          window.WebSocket.OPEN = OrigWS.OPEN;
+          window.WebSocket.CLOSING = OrigWS.CLOSING;
+          window.WebSocket.CLOSED = OrigWS.CLOSED;
+        }
+      })();
     </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"><h1 style="font-family:sans-serif;color:#f10c45;text-align:center;padding-top:40vh;font-size:2rem">ШУМ</h1></div>
+    <div id="root">
+      <h1
+        style="
+          font-family: sans-serif;
+          color: #be0036;
+          text-align: center;
+          padding-top: 40vh;
+          font-size: 2rem;
+        "
+      >
+        ШУМ
+      </h1>
+    </div>
     <script src="/src/index.ts" type="module"></script>
   </body>
 </html>
